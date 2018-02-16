@@ -4,8 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "09b85349cc7f141c95c6fb30ff90eda5",
-    "content-hash": "a0776033324a3ba20770e505dd096629",
+    "hash": "57553dc6a7d10dc2099ba81d2f63f8c7",
+    "content-hash": "2b614f511b91ff5da454dffff9c75923",
     "packages": [
         {
             "name": "cocur/slugify",
@@ -1734,6 +1734,60 @@
                 "uuid"
             ],
             "time": "2018-01-20 00:28:24"
+        },
+        {
+            "name": "rutorika/sortable",
+            "version": "4.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/boxfrommars/rutorika-sortable.git",
+                "reference": "d99db0a18bb004b49b7e6fdd82b5787b35e1dcfd"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/boxfrommars/rutorika-sortable/zipball/d99db0a18bb004b49b7e6fdd82b5787b35e1dcfd",
+                "reference": "d99db0a18bb004b49b7e6fdd82b5787b35e1dcfd",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/support": ">=5.5",
+                "php": ">=7"
+            },
+            "require-dev": {
+                "orchestra/database": "~3.1",
+                "orchestra/testbench": "3.5.*",
+                "phpunit/phpunit": "~6.3"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "Rutorika\\Sortable": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Dmitry Groza",
+                    "email": "boxfrommars@gmail.com"
+                }
+            ],
+            "description": "Adds sortable behavior and ordering to Laravel Eloquent models. Grouping and many to many supported.",
+            "keywords": [
+                "eloquent",
+                "laravel",
+                "laravel4",
+                "laravel5",
+                "order",
+                "orderable",
+                "ordering",
+                "sort",
+                "sortable",
+                "sorting"
+            ],
+            "time": "2017-11-26 23:33:48"
         },
         {
             "name": "swiftmailer/swiftmailer",

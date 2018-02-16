@@ -75,9 +75,11 @@
 					<a href="#" data-toggle="modal" data-target="#addVariantTypes" class="modal-launcher-link float-right" style="margin-left:7px;margin-right:5px;">Edit columns</a>
 					<a href="javascript:void(0);" onclick="document.getElementById('add_variant_block').classList.remove('hide')" class="float-right"  style="margin-left:7px;margin-right:7px;">Add variants</a>
 					<h4 style="">Variants:</h4>
+					<p class="note">Reorder variants by clicking and dragging the handle icon.</p>
 					<table class="table variants_table table-hover">
 						<thead>
 							<tr>
+								<th style="width:10px;"></th>
 								@foreach($product->variant_columns()->sortBy('value_2') as $column)
 									<th>{{$column->value}}</th>
 								@endforeach
@@ -87,14 +89,15 @@
 								<th style="width:30px;"></th>
 							</tr>
 						</thead>
-						<tbody>
+						<tbody data-entityname="variants">
 							@if($product->variants->count() == 0)
 								<tr id="no_variants_yet">
 									<td colspan="{{$product->variant_columns()->count() + 3}}">No variants yet. Click <a href="javascript:void(0);" onclick="document.getElementById('add_variant_block').classList.remove('hide')" >here</a> to add one.</td>
 								</tr>
 							@else
-								@foreach($product->variants->sortBy('id') as $variant)
-									<tr class="variant_{{$variant->id}}" data-id="{{$variant->id}}" data-inventory="{{$variant->inventory}}" data-price="{{$variant->price}}">
+								@foreach($product->variants->sortBy('position') as $variant)
+									<tr class="variant_{{$variant->id}}" data-id="{{$variant->id}}" data-inventory="{{$variant->inventory}}" data-price="{{$variant->price}}" data-itemId="{{{ $variant->id }}}">
+										<td class="sortable-handle"><i class="fas fa-arrows-alt-v"></i></td>
 										@foreach($product->variant_columns()->sortBy('value_2') as $column)
 											<td class="{{$column->value_2}}">{{ $variant->{$column->value_2} }}</td>
 										@endforeach
@@ -347,5 +350,9 @@
 		</div>
 		
 	</div>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js">
+@endsection
+
+@section('custom_js')
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
 @endsection

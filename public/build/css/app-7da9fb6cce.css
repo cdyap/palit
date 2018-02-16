@@ -112,6 +112,20 @@ table.table th {
   border-bottom: none;
 }
 
+.sortable-handle {
+  color: grey;
+  transition: 0.1s ease;
+  cursor: ns-resize;
+}
+
+.sortable-handle:hover {
+  color: black;
+}
+
+.sortable-handle:active {
+  color: black;
+}
+
 input.form-control, textarea.form-control {
   border-radius: 0px !important;
   -webkit-appearance: none;
@@ -388,7 +402,7 @@ tr.active {
 
 .admin .sidebar .item:not(.logo) svg {
   width: 40px;
-  fill: #7F7F7F !important;
+  fill: #7F7F7F;
 }
 
 .admin .sidebar .item:not(.logo):hover {

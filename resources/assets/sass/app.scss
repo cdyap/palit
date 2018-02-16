@@ -114,6 +114,17 @@ table.table {
 	border-bottom: none;
 }
 
+.sortable-handle {
+	color: grey;
+	transition: 0.1s ease;
+	cursor: ns-resize;
+	&:hover {
+		color: black;
+	}
+	&:active {
+		color: black;
+	}
+}
 
 // Forms
 input.form-control, textarea.form-control {
@@ -378,7 +389,7 @@ tr.active {
 			padding-top:10px;
 			svg{
 				width:40px;
-				fill: #7F7F7F!important;
+				fill: #7F7F7F;
 			}
 			&:hover {
 				cursor: pointer;

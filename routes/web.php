@@ -38,4 +38,6 @@ Route::group(['middleware' => 'auth', 'web', 'check_company'], function () {
 	Route::get('/{slug}/collections', 'AdminController@collections');
 	Route::get('/{slug}/orders', 'AdminController@orders');
 	Route::get('/{slug}/inventory', 'AdminController@inventory');
+
+	Route::post('/sort', '\Rutorika\Sortable\SortableController@sort');
 });

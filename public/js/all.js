@@ -36,7 +36,7 @@ $('body.admin.show, body.admin.new').ready(function(){
 	$('[data-toggle="tooltip"]').tooltip();
 	
 	// prevent 'enter' submitting form.
-	$('form:not(".with-cascading-disabling")').on("keypress", ":input:not(textarea)", function(event) {
+	$('form:not(".with-cascading-disabling, #add_variant_form")').on("keypress", ":input:not(textarea)", function(event) {
 	    return event.keyCode != 13;
 	});
 
@@ -332,5 +332,75 @@ $('body.admin.show, body.admin.new').ready(function(){
 		$('#edit_variant_block').addClass('hide');
 		$('#edit_variant_block form').reset();
 	});
+
+	//https://github.com/boxfrommars/rutorika-sortable
+	/**
+     *
+     * @param type string 'insertAfter' or 'insertBefore'
+     * @param entityName
+     * @param id
+     * @param positionId
+     */
+	var changePosition = function(requestData){
+        $.ajax({
+            'url': '/sort',
+            'type': 'POST',
+            'data': requestData,
+            'success': function(data) {
+                if (data.success) {
+                    $('.alerts-holder').prepend('<div class="alert alert-success alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>Variant reordered!<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+                } else {
+                	$.each( data.errors, function( key, value ) {
+                		$('.alerts-holder').prepend('<div class="alert alert-error alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>'+value+'<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+					});
+                    
+                }
+            },
+            'error': function(e){
+                $('.alerts-holder').prepend('<div class="alert alert-error alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>'+e.statusText+'<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+                console.log(e);
+            }
+        });
+    };
+
+    var $sortableTable = $('.variants_table tbody');
+    if ($sortableTable.length > 0) {
+        $sortableTable.sortable({
+            handle: '.sortable-handle',
+            axis: 'y',
+            update: function(a, b){
+
+                var entityName = $(this).data('entityname');
+                var $sorted = b.item;
+
+                var $previous = $sorted.prev();
+                var $next = $sorted.next();
+
+                if ($previous.length > 0) {
+                    changePosition({
+                        parentId: $sorted.data('parentid'),
+                        type: 'moveAfter',
+                        entityName: entityName,
+                        id: $sorted.data('itemid'),
+                        positionEntityId: $previous.data('itemid'),
+                        _token: $("meta[name='csrf-token']").attr('content')
+                    });
+                } else if ($next.length > 0) {
+                    changePosition({
+                        parentId: $sorted.data('parentid'),
+                        type: 'moveBefore',
+                        entityName: entityName,
+                        id: $sorted.data('itemid'),
+                        positionEntityId: $next.data('itemid'),
+                        _token: $("meta[name='csrf-token']").attr('content')
+                    });
+                } else {
+                    $('.alerts-holder').prepend('<div class="alert alert-error alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>Something went wrong!<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+                }
+            },
+            cursor: "move"
+        });
+        setTimeout(removeAddedAlerts, 5000);
+    }
 });
 //# sourceMappingURL=all.js.map

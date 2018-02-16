@@ -13,7 +13,9 @@ class Variant extends Model
 	protected $appends = array('view_price');
 	protected $dates = ['deleted_at'];
 	protected $fillable = ['inventory', 'price', 'attribute_1', 'attribute_2', 'attribute_3', 'attribute_4', 'attribute_5', 'SKU'];
+    
 	use SoftDeletes;
+    use \Rutorika\Sortable\SortableTrait;
 
     public function product(){
     	return $this->belongsTo('App\Product');
