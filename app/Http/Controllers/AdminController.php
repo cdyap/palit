@@ -12,10 +12,10 @@ class AdminController extends Controller
 
      public function __construct(){
         $this->middleware('web');
-        $this->middleware('check_company');
+        // $this->middleware('check_company');
 	 }
 
-    public function index($slug){
+    public function index(){
     	$sidebar = "Dashboard";
     	return view('admin.index',compact('sidebar'));
     }

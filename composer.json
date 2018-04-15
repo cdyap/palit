@@ -9,8 +9,12 @@
         "cviebrock/eloquent-sluggable": "^4.3",
         "doctrine/dbal": "^2.5",
         "fideloper/proxy": "~3.3",
+        "frenzy/turbolinks": "^3.2",
+        "gloudemans/notify": "^1.0",
+        "gloudemans/shoppingcart": "^2.5",
         "laravel/framework": "5.5.*",
         "laravel/tinker": "~1.0",
+        "nesbot/carbon": "^1.22",
         "rutorika/sortable": "^4.2"
     },
     "require-dev": {

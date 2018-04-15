@@ -2,10 +2,10 @@
 
 @section('content')
 	<br>
-	<h5><a href="/{{Auth::user()->company->slug}}/products/{{$product->slug}}">< {{$product->name}}</a></h5>
+	<h5><a href="/products/{{$product->slug}}">< {{$product->name}}</a></h5>
 	<div class="row">
 		<div class="col-lg-8">
-			<form action="/{{Auth::user()->company->slug}}/products/{{$product->slug}}/update" method="POST" class="with-cascading-disabling">
+			<form action="/products/{{$product->slug}}/update" method="POST" class="with-cascading-disabling">
 				<div class="block">
 					<h4>Product information for <b>{{$product->name}}</b>:</h4>
 					@if ($errors->any())
@@ -29,13 +29,6 @@
 						<label for="description">SKU:</label>
 						<input type="text" name="SKU" class="form-control {{ $errors->has('SKU') ? 'has-error' : ''}}" value="{{ $product->SKU }}">
 					</div>
-					<div class="form-group">
-						<div class="form-check">
-							<input class="form-check-input" type="checkbox" id="is_shipped" name="is_shipped" value="1" {{ ($product->is_shipped) ? "checked" : "" }}>
-							<label class="form-check-label" for="is_shipped">
-							For shipping?</label>
-						</div>
-					</div>	
 					<p class="note" style="margin-bottom:0;margin-top:10px;">* Required field</p>			
 				</div>
 				<div class="block">
@@ -64,7 +57,28 @@
 						<div class="col-lg-12">
 							<p class="note" style="margin-bottom:0;margin-top:10px;">* Required field</p>	
 						</div>
+					</div>
+				</div>
+				<div class="block">
+					<h4>Shipping and selling:</h4>
+					<div class="form-group">
+						<div class="form-check">
+							<input class="form-check-input" type="checkbox" id="is_shipped" name="is_shipped" value="1" {{ ($product->is_shipped) ? "checked" : "" }}>
+							<label class="form-check-label" for="is_shipped">
+							Require shipping?</label>
+						</div>
+
+						<div class="form-check">
+							<input class="form-check-input" type="checkbox" id="overselling_allowed" name="overselling_allowed" value="1" {{ ($product->overselling_allowed) ? "checked" : "" }}>
+							<label class="form-check-label" for="overselling_allowed">
+							Allow orders to exceed current inventory?</label>
+						</div>
 						
+					</div>	
+					<div class="form-group">
+						<label for="price">Items per shipment:</label>
+						<input type="number" name="item_per_shipment" class="form-control {{ $errors->has('item_per_shipment') ? 'has-error' : ''}}"  min="0", value="{{ $product->item_per_shipment }}" style="width:50%">
+						<p class="note" style="margin-bottom:0;margin-top:10px;">How many items can fit in one shipment?</p>
 					</div>
 				</div>
 				@if($product->variants->count() == 0)

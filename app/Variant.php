@@ -28,4 +28,38 @@ class Variant extends Model
     public function getViewPriceAttribute(){
     	return $this->product->currency . " " . number_format($this->price, 2, '.', ',');
     }
+
+    public function getIncomingInventoryAttribute(){
+        return $this->delivered_variants->sum('incoming_inventory');
+    }
+
+    public function getAvailableInventoryAttribute(){
+        return $this->delivered_variants->sum('delivered_quantity') + $this->inventory;
+    }
+
+    public function delivered_variants(){
+        return $this->hasMany('App\DeliveredVariant');      
+    }
+
+    public function getDescriptionAttribute(){
+        $description = $this->attribute_1;
+
+        if (!empty($this->attribute_2)) {
+            $description = $description . ", " . $this->attribute_2;
+        }
+
+        if (!empty($this->attribute_3)) {
+            $description = $description . ", " . $this->attribute_3;
+        }
+
+        if (!empty($this->attribute_4)) {
+            $description = $description . ", " . $this->attribute_4;
+        }
+
+        if (!empty($this->attribute_5)) {
+            $description = $description . ", " . $this->attribute_5;
+        }
+
+        return $description;
+    }
 }

@@ -50,8 +50,11 @@ return [
 
         'public' => [
             'driver' => 'local',
-            'root' => storage_path('app/public'),
-            'url' => env('APP_URL').'/storage',
+            // 'root' => storage_path('app/public'),
+            // 'url' => env('APP_URL').'/storage',
+            //https://medium.com/@AhmadYousefDev/multiple-image-uploader-with-laravel-5-5-and-dropzone-js-6f39974ba1c6
+            'root' => public_path('uploads'),
+            'url' => env('APP_URL').'/uploads',
             'visibility' => 'public',
         ],
 

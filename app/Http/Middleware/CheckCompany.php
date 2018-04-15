@@ -22,7 +22,13 @@ class CheckCompany
         }
 
         if ($request->route('slug') != Auth::user()->company->slug) {
-            return redirect('/' . Auth::user()->company->slug);
+            // return redirect('/' . Auth::user()->company->slug);
+            // $request->route('slug') = Auth::user()->company->slug;
+            $request->route()->setParameter('slug',  Auth::user()->company->slug);
+            $request->merge([
+                'slug' => Auth::user()->company->slug
+            ]);
+            return $next($request);
         }
         
         return $next($request);

@@ -41,6 +41,7 @@ class LoginController extends Controller
 
     protected function authenticated(Request $request, $user)
     {
-         return redirect('/'. $user->company->slug);
+        //redirect to admin dashboard
+         return redirect('/dashboard');
     }
 }

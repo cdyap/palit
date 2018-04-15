@@ -13,22 +13,32 @@ class Product extends Model
     //
     public $timestamps = false;
     protected $dates = ['deleted_at'];
-    protected $fillable = ['name', 'description', 'image_url', 'slug', 'is_shipped', 'currency', 'price', 'is_available', 'SKU', 'quantity'];
-    
+    protected $fillable = ['name', 'description', 'image_url', 'slug', 'is_shipped', 'currency', 'price', 'is_available', 'SKU', 'quantity', 'item_per_shipment', 'overselling_allowed'];
+    protected $appends = ['shipping_factor'];
+
     use Sluggable;
     use SoftDeletes;
-    
+
     public function collections()
     {
         return $this->belongsToMany('App\Collection');
     }
 
     public function variants(){
-    	return $this->hasMany('App\Variant');
+    	return $this->hasMany('App\Variant')->orderBy('position');
     }
 
     public function company(){
         return $this->belongsTo('App\Company');
+    }
+
+    public function delivered_products(){
+        return $this->hasMany('App\DeliveredProduct');      
+    }
+
+    public function delivered_variants()
+    {
+        return $this->hasMany('App\DeliveredVariant');
     }
 
     public function view_price(){
@@ -41,6 +51,19 @@ class Product extends Model
         } else {
             return $this->quantity;
         }
+    }
+
+    public function getAvailableInventoryAttribute(){
+        return $this->quantity + $this->delivered_products->sum('delivered_quantity') + $this->variants->sum('available_inventory');
+    }
+
+    public function getIncomingInventoryAttribute(){
+        return $this->delivered_products->sum('incoming_inventory') + $this->delivered_variants->sum('incoming_inventory');
+    }
+
+    //if item_per_shipment is 2, 2 pieces will fit in one shipment. Each item will occupy 1/2 space.
+    public function getShippingFactorAttribute(){
+        return 1 / $this->item_per_shipment;
     }
 
     public function hasSameVariantPrices(){
@@ -56,7 +79,7 @@ class Product extends Model
     }
 
     public function variant_columns(){
-    	return Setting::where('name', 'variant_' . $this->id)->where('company_id', Auth::user()->company->id)->orderBy('value_2')->get();
+    	return Setting::where('name', 'variant_' . $this->id)->orderBy('value_2')->get();
     }
 
     public function sluggable()
@@ -66,21 +89,5 @@ class Product extends Model
                 'source' => 'name'
             ]
         ];
-    }
-
-    public static function boot()
-    {
-        parent::boot();
-        
-        // Attach event handler, on deleting of the product
-        Product::deleting(function($product)
-        {   
-            $product->slug = null;
-            $product->save();
-
-            foreach ($product->variants as $variant) {
-                $variant->delete();
-            }
-        });
     }
 }

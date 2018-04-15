@@ -4,9 +4,69 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "57553dc6a7d10dc2099ba81d2f63f8c7",
-    "content-hash": "2b614f511b91ff5da454dffff9c75923",
+    "hash": "cbec1e3177de65f9160a08d1539728ce",
+    "content-hash": "f5071c7a61a80558c159b2bc1619d033",
     "packages": [
+        {
+            "name": "barryvdh/laravel-stack-middleware",
+            "version": "v1.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/barryvdh/laravel-stack-middleware.git",
+                "reference": "f91f8cee1fdb0f699f8f9f12d6d3b5ee84fb4c2f"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/barryvdh/laravel-stack-middleware/zipball/f91f8cee1fdb0f699f8f9f12d6d3b5ee84fb4c2f",
+                "reference": "f91f8cee1fdb0f699f8f9f12d6d3b5ee84fb4c2f",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/support": "5.1.x|5.2.x|5.3.x|5.4.x|5.5.x",
+                "php": ">=5.5",
+                "symfony/http-kernel": "~2.6|~3.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "~4.5"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.0-dev"
+                },
+                "laravel": {
+                    "providers": [
+                        "Barryvdh\\StackMiddleware\\ServiceProvider"
+                    ],
+                    "aliases": {
+                        "Stack": "Barryvdh\\StackMiddleware\\Facade"
+                    }
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Barryvdh\\StackMiddleware\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Barry vd. Heuvel",
+                    "email": "barryvdh@gmail.com"
+                }
+            ],
+            "description": "Stack Middleware for Laravel 5",
+            "keywords": [
+                "StackPHP",
+                "laravel",
+                "middleware",
+                "stack"
+            ],
+            "time": "2017-06-14 17:55:59"
+        },
         {
             "name": "cocur/slugify",
             "version": "v3.1",
@@ -796,6 +856,227 @@
                 "trusted proxy"
             ],
             "time": "2017-06-15 17:19:42"
+        },
+        {
+            "name": "frenzy/turbolinks",
+            "version": "3.2.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/frenzyapp/turbolinks.git",
+                "reference": "b0535efcf149645e538518b325bc12873716f1c1"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/frenzyapp/turbolinks/zipball/b0535efcf149645e538518b325bc12873716f1c1",
+                "reference": "b0535efcf149645e538518b325bc12873716f1c1",
+                "shasum": ""
+            },
+            "require": {
+                "barryvdh/laravel-stack-middleware": "~1.1.1",
+                "helthe/turbolinks": "~2.1.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Frenzy\\Turbolinks\\TurbolinksServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-0": {
+                    "Frenzy\\Turbolinks\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Studio Frénétic",
+                    "email": "info@studiofrenetic.com"
+                },
+                {
+                    "name": "Tortue Torche",
+                    "email": "tortuetorche@spam.me"
+                }
+            ],
+            "description": "Frenzy Turbolinks makes following links in your web application faster with Laravel 5",
+            "keywords": [
+                "ajax",
+                "assets",
+                "javascript",
+                "larasset",
+                "laravel",
+                "laravel 5",
+                "pjax",
+                "turbolinks",
+                "turbolinks 5"
+            ],
+            "time": "2018-01-15 10:29:55"
+        },
+        {
+            "name": "gloudemans/notify",
+            "version": "1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Crinsane/LaravelNotify.git",
+                "reference": "e1320ecbf50c53ad211945b462e20302ab453c40"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Crinsane/LaravelNotify/zipball/e1320ecbf50c53ad211945b462e20302ab453c40",
+                "reference": "e1320ecbf50c53ad211945b462e20302ab453c40",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/session": "^5.1",
+                "illuminate/support": "^5.1",
+                "illuminate/view": "^5.1",
+                "php": ">=5.5.0"
+            },
+            "require-dev": {
+                "mockery/mockery": "^0.9.4",
+                "phpunit/phpunit": "^4.8"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Gloudemans\\Notify\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Rob Gloudemans",
+                    "email": "robgloudemans@gmail.com"
+                }
+            ],
+            "description": "Laravel Notifications",
+            "keywords": [
+                "flashnotifictions",
+                "laravel",
+                "notifications",
+                "notify"
+            ],
+            "time": "2015-08-22 14:26:09"
+        },
+        {
+            "name": "gloudemans/shoppingcart",
+            "version": "2.5.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Crinsane/LaravelShoppingcart.git",
+                "reference": "7ff157b7e1ef10d27cd2759d5151aae2cc6b1b9a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Crinsane/LaravelShoppingcart/zipball/7ff157b7e1ef10d27cd2759d5151aae2cc6b1b9a",
+                "reference": "7ff157b7e1ef10d27cd2759d5151aae2cc6b1b9a",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/events": "5.1.*|5.2.*|5.3.*|5.4.*|5.5.*|5.6.*",
+                "illuminate/session": "5.1.*|5.2.*|5.3.*|5.4.*|5.5.*|5.6.*",
+                "illuminate/support": "5.1.*|5.2.*|5.3.*|5.4.*|5.5.*|5.6.*"
+            },
+            "require-dev": {
+                "mockery/mockery": "~0.9.0",
+                "orchestra/testbench": "~3.1",
+                "phpunit/phpunit": "~5.0|~6.0|~7.0"
+            },
+            "suggest": {
+                "gloudemans/notify": "Simple flash notifications for Laravel"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Gloudemans\\Shoppingcart\\ShoppingcartServiceProvider"
+                    ],
+                    "aliases": {
+                        "Cart": "Gloudemans\\Shoppingcart\\Facades\\Cart"
+                    }
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Gloudemans\\Shoppingcart\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Rob Gloudemans",
+                    "email": "info@robgloudemans.nl"
+                }
+            ],
+            "description": "Laravel Shoppingcart",
+            "keywords": [
+                "laravel",
+                "shoppingcart"
+            ],
+            "time": "2018-02-17 09:34:00"
+        },
+        {
+            "name": "helthe/turbolinks",
+            "version": "2.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/helthe/Turbolinks.git",
+                "reference": "11acaefc2242d0f18c879a4ede7f03aee487cfde"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/helthe/Turbolinks/zipball/11acaefc2242d0f18c879a4ede7f03aee487cfde",
+                "reference": "11acaefc2242d0f18c879a4ede7f03aee487cfde",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.3",
+                "symfony/http-foundation": "~2.3|~3.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "~4.8",
+                "symfony/http-kernel": "~2.3|~3.0"
+            },
+            "suggest": {
+                "symfony/http-kernel": "Required for usage with the Symfony HttpKernel Component"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.4.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Helthe\\Component\\Turbolinks\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Carl Alexander",
+                    "email": "carlalexander@helthe.co"
+                }
+            ],
+            "description": "Helthe Turbolinks Component",
+            "homepage": "https://helthe.co",
+            "keywords": [
+                "turbolinks"
+            ],
+            "time": "2018-01-04 10:23:35"
         },
         {
             "name": "jakub-onderka/php-console-color",

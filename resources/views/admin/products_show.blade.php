@@ -20,7 +20,7 @@
 	@endif
 	</div>
 	<br>
-	<h5><a href="/{{Auth::user()->company->slug}}/products">< All products</a></h5>
+	<h5><a href="/products">< All products</a></h5>
 	<div class="row">
 		<div class="col-xs-12 col-lg-9">
 			<div class="block">
@@ -30,8 +30,11 @@
 						<i class="fas fa-ellipsis-v"></i>
 					</div>
 					<div class="dropdown-menu">
-						<a class="dropdown-item" href="/{{Auth::user()->url()}}/products/{{$product->slug}}/edit">Edit product</a>
-						<a class="dropdown-item" href="javascript:void(0);" id="toggle_availability" variant="{{$product->id}}">Make available</a>
+						<a class="dropdown-item" href="/products/{{$product->slug}}/edit">Edit product</a>
+						<a class="dropdown-item" href="javascript:void(0);" id="toggle_availability" variant="{{$product->id}}">Make {{($product->is_available) ? "unavailable" : "available"}}</a>
+						<div class="dropdown-divider"></div>
+						<a class="dropdown-item" href="javascript:void(0);" data-toggle="modal" data-target="#uploadImage">Upload header image</a>
+						<a class="dropdown-item delete-header-image-option {{ (empty($product->image_url)) ? 'hide' : '' }}" href="javascript:void(0);" data-toggle="modal" data-target="#deleteImage">Delete header image</a>
 						<div class="dropdown-divider"></div>
 						<a class="dropdown-item delete" data-toggle="modal" data-target="#deleteProduct">Delete product</a>
 					</div>
@@ -55,22 +58,46 @@
 				@endif
 
 				<p class="caption">TOTAL QUANTITY:</p>
-				<h5 id="total_inventory">{{ $product->total_inventory }}</h5>
+				<h5 id="total_inventory">{{ (empty($product->total_inventory)) ? 0 : $product->total_inventory }}</h5>
 				
-				<p class="caption">SHIPPING:</p>
+			</div>
+		</div>
+		<div class="col-xs-12 col-lg-3">
+			<div class="block header-image-block {{ (empty($product->image_url)) ? 'hide' : '' }}">
+				<h4>Header image:</h4>
+				<div class="square-container">
+					<img src="/uploads/{{$product->image_url}}" alt="Header image" class="img-responsive">
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<div class="row">
+		<div class="col-xs-12 col-lg-9">
+			<div class="block">
+				<h4>Shipping and selling:</h4>
+				<p class="caption">ALLOW ORDERS TO EXCEED CURRENT INVENTORY?</p>
+				@if (!$product->overselling_allowed)
+					<h5>DO NOT ALLOW</h5>
+				@else
+					<h5>ALLOW</h5>
+				@endif
+				<p class="caption">SHIPPING REQUIRED?</p>
 				@if (!$product->is_shipped)
 					<h5>NOT REQUIRED</h5>
 				@else
 					<h5>REQUIRED</h5>
 				@endif
+				<p class="caption">ITEMS PER SHIPMENT:</p>
+				<h5>{{$product->item_per_shipment}}</h5>
 			</div>
 		</div>
 	</div>
-	
+
 	<div class="row" >
 		@if($product->variant_columns()->count() > 0) 
 			<div class="col-xs-12 col-lg-9">
-				<div class="block table-responsive-sm" style="margin-top:0px;">
+				<div class="block table-responsive-sm">
 					
 					<a href="#" data-toggle="modal" data-target="#addVariantTypes" class="modal-launcher-link float-right" style="margin-left:7px;margin-right:5px;">Edit columns</a>
 					<a href="javascript:void(0);" onclick="document.getElementById('add_variant_block').classList.remove('hide')" class="float-right"  style="margin-left:7px;margin-right:7px;">Add variants</a>
@@ -92,7 +119,7 @@
 						<tbody data-entityname="variants">
 							@if($product->variants->count() == 0)
 								<tr id="no_variants_yet">
-									<td colspan="{{$product->variant_columns()->count() + 3}}">No variants yet. Click <a href="javascript:void(0);" onclick="document.getElementById('add_variant_block').classList.remove('hide')" >here</a> to add one.</td>
+									<td colspan="{{$product->variant_columns()->count() + 5}}">No variants yet. Click <a href="javascript:void(0);" onclick="document.getElementById('add_variant_block').classList.remove('hide')" >here</a> to add one.</td>
 								</tr>
 							@else
 								@foreach($product->variants->sortBy('position') as $variant)
@@ -122,7 +149,7 @@
 										<div class="modal fade bd-example-modal" tabindex="-1" role="dialog" id="deleteVariant{{$variant->id}}" aria-labelledby="deleteVariant" aria-hidden="true">
 											<div class="modal-dialog modal modal-dialog-centered" role="document">
 												<div class="modal-content ">
-													<form action="/{{Auth::user()->url()}}/products/{{$product->slug}}/{{$variant->id}}/delete" method="POST" class="delete_variant_form" row_class="variant_{{$variant->id}}">
+													<form action="/products/{{$product->slug}}/{{$variant->id}}/delete" method="POST" class="delete_variant_form" row_class="variant_{{$variant->id}}">
 														<input type="hidden" name="_token" value="{{ csrf_token() }}">
 														<input type="hidden" name="_method" value="delete" />
 														<div class="modal-header">
@@ -171,7 +198,7 @@
 				<div class="modal fade bd-example-modal-lg" id="addVariantTypes" tabindex="-1" role="dialog" aria-labelledby="Add variant types" aria-hidden="true">
 					<div class="modal-dialog modal-lg" role="document">
 						<div class="modal-content">
-							<form action="/{{Auth::user()->url()}}/products/{{$product->slug}}/addVariantColumn" method="POST" class="with-cascading-disabling">
+							<form action="/products/{{$product->slug}}/addVariantColumn" method="POST" class="with-cascading-disabling">
 								<input type="hidden" name="_token" value="{{ csrf_token() }}">
 								<div class="modal-header">
 									<h5 class="modal-title" id="exampleModalLabel">Edit variant columns</h5>
@@ -214,12 +241,12 @@
 				</div>
 			</div>
 			<div class="col-xs-12 col-lg-3">
-				<div class="block hide" id="add_variant_block" style="margin-top:0px;">
+				<div class="block hide" id="add_variant_block">
 					<button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="document.getElementById('add_variant_block').classList.add('hide')">
 					<span aria-hidden="true">&times;</span>
 					</button>
 					<h5 class="modal-title" style="margin-bottom:20px;">Add variants:</h5>
-					<form action="/{{Auth::user()->url()}}/products/{{$product->slug}}/addVariant" method="POST" id="add_variant_form">
+					<form action="/products/{{$product->slug}}/addVariant" method="POST" id="add_variant_form">
 						<input type="hidden" name="_token" value="{{ csrf_token() }}">
 						@for ($i = 1; $i <= 5; $i++)
 							@if($product->variant_columns()->where('value_2', 'attribute_'.$i)->count() == 1)
@@ -248,7 +275,7 @@
 					<span aria-hidden="true">&times;</span>
 					</button>
 					<h5 class="modal-title" style="margin-bottom:20px;">Edit variants:</h5>
-					<form action="/{{Auth::user()->url()}}/products/{{$product->slug}}/editVariant" method="POST" id="add_variant_form">
+					<form action="/products/{{$product->slug}}/editVariant" method="POST" id="add_variant_form">
 						<input type="hidden" name="_token" value="{{ csrf_token() }}">
 						<input type="hidden" name="_method" value="PATCH">
 						@for ($i = 1; $i <= 5; $i++)
@@ -281,7 +308,7 @@
 				<div class="modal fade bd-example-modal-lg" id="addVariantTypes" tabindex="-1" role="dialog" aria-labelledby="AddVariantTypes" aria-hidden="true">
 					<div class="modal-dialog modal-lg" role="document">
 						<div class="modal-content ">
-							<form action="/{{Auth::user()->url()}}/products/{{$product->slug}}/addVariantColumn" method="POST" class="with-cascading-disabling">
+							<form action="/products/{{$product->slug}}/addVariantColumn" method="POST" class="with-cascading-disabling">
 								<input type="hidden" name="_token" value="{{ csrf_token() }}">
 								<div class="modal-header">
 									<h5 class="modal-title" id="exampleModalLabel">Add variant columns</h5>
@@ -325,10 +352,11 @@
 			</div>
 		@endif
 		
+		<!-- delete product modal -->
 		<div class="modal fade bd-example-modal" id="deleteProduct" tabindex="-1" role="dialog" aria-labelledby="deleteProduct" aria-hidden="true">
 			<div class="modal-dialog modal modal-dialog-centered" role="document">
 				<div class="modal-content ">
-					<form action="/{{Auth::user()->url()}}/products/{{$product->slug}}/delete" method="POST" >
+					<form action="/products/{{$product->slug}}/delete" method="POST" >
 						<input type="hidden" name="_token" value="{{ csrf_token() }}">
 						<input type="hidden" name="_method" value="delete" />
 						<div class="modal-header">
@@ -348,11 +376,70 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- remove header image modal -->
+		<div class="modal fade bd-example-modal" id="deleteImage" tabindex="-1" role="dialog" aria-labelledby="deleteImage" aria-hidden="true">
+			<div class="modal-dialog modal modal-dialog-centered" role="document">
+				<div class="modal-content ">
+					<form action="/products/{{$product->slug}}/deleteHeaderImage" method="POST" >
+						<input type="hidden" name="_token" value="{{ csrf_token() }}">
+						<input type="hidden" name="_method" value="delete" />
+						<div class="modal-header">
+							<h5 class="modal-title" id="exampleModalLabel">DELETE HEADER IMAGE</h5>
+							<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+							<span aria-hidden="true">&times;</span>
+							</button>
+						</div>
+							<div class="modal-body">
+								<h5>Delete header image for {{$product->name}}?</h5>
+							</div>
+						<div class="modal-footer">
+							<button type="button" class="button secondary" data-dismiss="modal">Cancel</button>
+							<button type="submit" class="button delete">Delete</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+
+		<!-- upload image modal -->
+		<div class="modal fade bd-example-modal-lg" id="uploadImage" tabindex="-1" role="dialog" aria-labelledby="uploadImage" aria-hidden="true">
+			<div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+				<div class="modal-content ">
+					<div class="modal-header">
+						<h5 class="modal-title" id="exampleModalLabel">Upload header image for {{$product->name}}</h5>
+						<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+						</button>
+					</div>
+						<div class="modal-body">
+							
+							<form action="/products/{{$product->slug}}/uploadHeaderImage" method="POST" enctype="multipart/form-data" class="dropzone .align-items-center .justify-content-center" id="upload-image-dropzone">
+							    {{ csrf_field() }}
+							</form>
+							<br>
+							<p class="note">Only <b>one image file (.png, .jpg, .gif)</b> with maximum dimensions of <b>1000 x 1000 pixels</b> and a size of <b>2 MB</b> will be accepted.</p>
+						</div>
+					<div class="modal-footer hide">
+						<button type="button" class="button secondary" data-dismiss="modal">Cancel</button>
+						<button type="submit" class="button accent">Upload</button>
+					</div>
+				</div>
+			</div>
+		</div>
 		
 	</div>
+	<!-- <script type="text/javascript" src="{{ URL::asset('js/dropzone.min.js') }}"></script> -->
+	
 @endsection
 
 @section('custom_js')
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
-	<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+	<script type="text/javascript" src="{{ URL::asset('js/jquery-ui.min.js') }}"></script> 	
+	<script type="text/javascript">
+		Dropzone.autoDiscover = false;
+	</script>
+@endsection
+
+@section('fontawesome')
+	 <script defer src="https://use.fontawesome.com/releases/v5.0.6/js/all.js"></script>
 @endsection

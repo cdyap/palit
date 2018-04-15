@@ -2,10 +2,10 @@
 
 @section('content')
 	<br>
-	<h5><a href="/{{Auth::user()->company->slug}}/products">< All products</a></h5>
+	<h5><a href="/products">< All products</a></h5>
 	<div class="row">
 		<div class="col-lg-8">
-			<form action="/{{Auth::user()->company->slug}}/products/save" method="POST" class="with-cascading-disabling">
+			<form action="/products/save" method="POST" class="with-cascading-disabling">
 				<div class="block">
 					<h4>Product information:</h4>
 					@if ($errors->any())
@@ -28,13 +28,6 @@
 						<label for="description">SKU:</label>
 						<input type="text" name="SKU" class="form-control {{ $errors->has('SKU') ? 'has-error' : ''}}" value="{{ old('SKU') }}">
 					</div>
-					<div class="form-group">
-						<div class="form-check">
-							<input class="form-check-input" type="checkbox" id="is_shipped" name="is_shipped" value="1" {{ (!empty(old('is_shipped'))) ? "checked" : "" }} >
-							<label class="form-check-label" for="is_shipped">
-							For shipping?</label>
-						</div>
-					</div>	
 					<p class="note" style="margin-bottom:0;margin-top:10px;">* Required field</p>			
 				</div>
 				<div class="block">
@@ -56,6 +49,27 @@
 						<p class="note" style="margin-bottom:0;margin-top:10px;">* Required field</p>
 					</div>
 				</div>
+				<div class="block">
+					<h4>Shipping and selling:</h4>
+					<div class="form-group">
+						<div class="form-check">
+							<input class="form-check-input" type="checkbox" id="is_shipped" name="is_shipped" value="1" {{ (!empty(old('is_shipped'))) ? "checked" : "" }} >
+							<label class="form-check-label" for="is_shipped">
+							Require shipping?</label>
+						</div>
+						<div class="form-check">
+							<input class="form-check-input" type="checkbox" id="overselling_allowed" name="overselling_allowed" value="1" {{ (!empty(old('overselling_allowed'))) ? "checked" : "" }} >
+							<label class="form-check-label" for="overselling_allowed">
+							Allow orders to exceed current inventory?</label>
+						</div>
+					</div>	
+					<div class="form-group">
+						<label for="price">Items per shipment:</label>
+						<input type="number" name="item_per_shipment" class="form-control {{ $errors->has('item_per_shipment') ? 'has-error' : ''}}"  min="0", value="{{ (!empty(old('is_shipped'))) ? old('item_per_shipment') : 1  }}" style="width:50%">
+						<p class="note" style="margin-bottom:0;margin-top:10px;">How many items can fit in one shipment?</p>
+					</div>
+				</div>
+
 				<div class="block">
 					<h4>Variants:</h4>
 					<p class="note">Enter new columns consecutively. Clearing a column will also clear all columns to the right.</p>

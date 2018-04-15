@@ -8,16 +8,20 @@ use \App\Product;
 use \App\Variant;
 use \App\Setting;
 use \App\AppSettings;
+use Carbon\Carbon;
 use Auth;
+use File;
+use Validator;
 use Illuminate\Database\Query\Builder;
 
 class ProductsController extends Controller
 {
     //
-	public function index($slug){
+	public function index(){
     	$sidebar = "Products";
     	$title = "All products";
-    	$products = Product::get();
+    	$company = Auth::user()->company;
+    	$products = Product::orderBy('name')->where('company_id', $company->id)->get();
 
     	$available_products = $products->where('is_available', true);
     	$unavailable_products = $products->where('is_available', false);
@@ -25,7 +29,7 @@ class ProductsController extends Controller
     	return view('admin.products',compact('sidebar', 'title', 'products', 'available_products', 'unavailable_products'));
     }
 
-    public function new($slug){
+    public function new(){
     	$sidebar = "Products";
     	$title = "New product";
 
@@ -34,10 +38,10 @@ class ProductsController extends Controller
     	return view('admin.products_new',compact('sidebar', 'title', 'currencies'));
     }
 
-    public function edit($slug, $product_slug){
+    public function edit($product_slug){
     	try {
 
-	    	$product = Product::where('slug', $product_slug)->firstOrFail();
+	    	$product = Product::where('slug', $product_slug)->where('company_id', Auth::user()->company->id)->firstOrFail();
 	    	$sidebar = "Products";
 	    	$title = "Edit ". $product->name;
 
@@ -52,9 +56,9 @@ class ProductsController extends Controller
 		}
     }
 
-    public function update($slug, $product_slug, Request $request){
+    public function update($product_slug, Request $request){
     	try {
-    		$product = Product::where('slug', $product_slug)->firstOrFail();
+    		$product = Product::where('slug', $product_slug)->where('company_id', Auth::user()->company->id)->firstOrFail();
 	    	$sidebar = "Products";
 	    	$title = "Edit ". $product->name;
 	    	$validatedData = $request->validate([
@@ -63,9 +67,9 @@ class ProductsController extends Controller
 		        'currency' => 'required',
 		        'price' => 'sometimes|numeric|min:0',
 		        'quantity' => 'sometimes|nullable|numeric|min:0',
-		        'SKU' => Rule::unique('products')->where(function ($query) {
-				    return $query->where('company_id', Auth::user()->company->id);
-				})
+		  //       'SKU' => Rule::unique('products')->where(function ($query) {
+				//     return $query->where('company_id', Auth::user()->company->id);
+				// })
 		    ]);
 
 		    if (!empty($request->price)) {
@@ -79,10 +83,15 @@ class ProductsController extends Controller
 		    	$product->save();
 		    }
 
-			return redirect('/'.Auth::user()->url().'/products/'.$product->slug)->with(['success' => " edited!", 'emphasize' => $product->name]);		    
+		    if(empty($request->overselling_allowed)) {
+		    	$product->overselling_allowed = false;
+		    	$product->save();
+		    }
+
+			return redirect('/products/'.$product->slug)->with(['success' => " edited!", 'emphasize' => $product->name]);		    
 
     	} catch (Exception $e) {
-    		$product = Product::where('slug', $product_slug)->firstOrFail();
+    		$product = Product::where('slug', $product_slug)->where('company_id', Auth::user()->company->id)->firstOrFail();
 	    	$sidebar = "Products";
 	    	$title = "Edit ". $product->name;
 
@@ -92,10 +101,19 @@ class ProductsController extends Controller
 
     public function delete($slug, $product_slug, Request $request){
     	try {
-	    	$product = Product::where('slug', $product_slug)->firstOrFail();
-	    	$product->delete();
+	    	$product = Product::where('slug', $product_slug)->where('company_id', Auth::user()->company->id)->firstOrFail();
+	    	$product->deleted_at = Carbon::now()->toDateTimeString();
+	    	$product->save();
 
-	    	return redirect('/'.Auth::user()->url().'/products')->with(['success' => " deleted!", 'emphasize' => $product->name]);
+	    	//delete existing image
+	    	if(File::exists(public_path()."/uploads/".$product->image_url)) {
+			    File::delete(public_path()."/uploads/".$product->image_url);
+			}
+            foreach ($product->variants as $variant) {
+                $variant->delete();
+            }
+
+	    	return redirect('/products')->with(['success' => " deleted!", 'emphasize' => $product->name]);
 		} catch (Exception $e) {
 			return back()->with(['error' => $e->getMessage()]);
 		}
@@ -103,21 +121,18 @@ class ProductsController extends Controller
 
 	public function save(Request $request){
 		$validatedData = $request->validate([
-	        'name' => 'required|unique:products',
+	        'name' => 'required|unique:products,name,NULL,id,deleted_at,NULL',
 	        'description' => 'required',
 	        'currency' => 'required',
 	        'price' => 'numeric|min:0',
-	        'quantity' => 'nullable|numeric|min:0',
-	        'SKU' => Rule::unique('products')->where(function ($query) {
-			    return $query->where('company_id', Auth::user()->company->id);
-			})
+	        'quantity' => 'nullable|numeric|min:0'
 	    ]);
 
 		$product = new Product;
 
 		$product->name = $request->name;
 		$product->description = $request->description;
-		$product->company_id = Auth::id();
+		$product->company_id = Auth::user()->company->id;
 		$product->price = $request->price;
 		$product->currency = $request->currency;
 		$product->SKU = $request->SKU;
@@ -125,6 +140,9 @@ class ProductsController extends Controller
 		$product->quantity = $request->quantity;
 		if (!empty($request->is_shipped)){
 			$product->is_shipped = true;
+		}
+		if (!empty($request->overselling_allowed)){
+			$product->overselling_allowed = true;
 		}
 
 		$product->save();
@@ -179,20 +197,24 @@ class ProductsController extends Controller
 
 			$variant->save();
 		}
-		return redirect('/'.Auth::user()->url().'/products')->with(['success' => " added!", 'emphasize' => $product->name]);
+		return redirect('/products')->with(['success' => " added!", 'emphasize' => $product->name]);
 	}
 
-	public function show($slug, $product_slug){
-		$product = Product::where('slug', $product_slug)->with('variants')->get()->first();
-		$title = $product->name;
-		$sidebar = "Products";
-
-		return view('admin.products_show',compact('sidebar', 'product', 'title'));
-	}
-
-	public function addVariantColumn($slug, $product_slug, Request $request){
+	public function show($product_slug){
 		try {
-			$product = Product::where('slug', $product_slug)->with('variants')->firstOrFail();
+			$product = Product::where('slug', $product_slug)->with('variants')->where('company_id', Auth::user()->company->id)->firstOrFail();
+			$title = $product->name;
+			$sidebar = "Products";
+
+			return view('admin.products_show',compact('sidebar', 'product', 'title'));
+		} catch (Exception $e) {
+			return redirect('/products');
+		}
+	}
+
+	public function addVariantColumn($product_slug, Request $request){
+		try {
+			$product = Product::where('slug', $product_slug)->where('company_id', Auth::user()->company->id)->with('variants')->firstOrFail();
 			$title = $product->name;
 			$sidebar = "Products";
 			$count_variants_added = 0;
@@ -351,19 +373,19 @@ class ProductsController extends Controller
 
 			$success = "Variant columns modified!";
 
-			return redirect('/'.Auth::user()->url().'/products/'.$product->slug)->with(compact('sidebar', 'product', 'title', 'success'));
+			return redirect('/products/'.$product->slug)->with(compact('sidebar', 'product', 'title', 'success'));
 		} catch (Exception $e) {
 
 			$error = $e->getMessage();
 
-			return redirect('/'.Auth::user()->url().'/products/'.$product->slug)->with(compact('error', 'product', 'title', 'confirmation_message'));
+			return redirect('/products/'.$product->slug)->with(compact('error', 'product', 'title', 'confirmation_message'));
 		}
 	}
 
-	public function addVariant($slug, $product_slug, Request $request){
+	public function addVariant($product_slug, Request $request){
 		try {
 			$company = Auth::user()->company;
-			$product = Product::where('slug', $product_slug)->firstOrFail();
+			$product = Product::where('slug', $product_slug)->where('company_id', $company->id)->firstOrFail();
 			
 			Builder::macro('if', function ($condition, $column, $operator, $value) {
 				if ($condition) {
@@ -429,7 +451,7 @@ class ProductsController extends Controller
 		}
 	}
 
-	public function editVariant($slug, $product_slug, Request $request){
+	public function editVariant($product_slug, Request $request){
 		try {
 			$validatedData = $request->validate([
 		        'attribute_1' => 'required',
@@ -438,7 +460,7 @@ class ProductsController extends Controller
 		    ]);
 
 			$sidebar = "Products";
-			$product = Product::where('slug', $product_slug)->firstOrFail();
+			$product = Product::where('slug', $product_slug)->where('company_id', Auth::user()->company->id)->firstOrFail();
 	    	$title = $product->name;
 			$variant = Variant::findOrFail($request->variant_id);
 			$variant->update($request->all());
@@ -452,12 +474,12 @@ class ProductsController extends Controller
 		}
 	}
 
-	public function deleteVariant($slug, $product_slug, $variant_id, Request $request){
+	public function deleteVariant($product_slug, $variant_id, Request $request){
 		try {
 			$variant = Variant::findOrFail($variant_id);
 			$variant->delete();
 
-			$product = Product::with('variants')->where('slug', $product_slug)->firstOrFail();
+			$product = Product::with('variants')->where('company_id', Auth::user()->company->id)->where('slug', $product_slug)->firstOrFail();
 
 			$sidebar = "Products";
 			$title = $product->name;
@@ -487,7 +509,8 @@ class ProductsController extends Controller
 
 				return response()->json([
 					'name' => $product->name,
-					'is_available' => $product->is_available
+					'is_available' => $product->is_available,
+					'slug' => $product->slug
 				]);
 			} else {
 				$product->is_available = true;
@@ -495,7 +518,8 @@ class ProductsController extends Controller
 
 				return response()->json([
 				    'name' => $product->name,
-					'is_available' => $product->is_available
+					'is_available' => $product->is_available,
+					'slug' => $product->slug
 				]);
 			}
 		} catch (Exception $e) {
@@ -532,6 +556,72 @@ class ProductsController extends Controller
 				    'success' => 0,
 				    'message' => $e->getMessage()
 				]);
+		}
+	}
+
+	public function uploadHeaderImage($product_slug, Request $request){
+		try {
+			$product = Product::where('slug', $product_slug)->where('company_id', Auth::user()->company->id)->firstOrFail();
+			// Creating a new time instance, we'll use it to name our file and declare the path
+		    $time = Carbon::now();
+		    // Requesting the file from the form
+		    Validator::make($request->all(), [
+			    'file' => 'image|required|dimensions:max_width=1000,max_height=1000|max:2048'
+			])->validate();
+
+		    $image = $request->file('file');
+		    // Getting the extension of the file 
+		    $extension = $image->getClientOriginalExtension();
+		    // Creating the directory, for example, if the date = 18/10/2017, the directory will be 2017/10/
+		    $directory = date_format($time, 'Y') . '/' . date_format($time, 'm');
+		    // Creating the file name: random string followed by the day, random number and the hour
+		    $filename = str_random(5).date_format($time,'d').rand(1,9).date_format($time,'h').".".$extension;
+
+		    //delete existing image
+			if(File::exists(public_path()."/uploads/".$product->image_url)) {
+			    File::delete(public_path()."/uploads/".$product->image_url);
+			}
+			// This is our upload main function, storing the image in the storage that named 'public'
+		    $upload_success = $image->storeAs($directory, $filename, 'public');
+		    // If the upload is successful, return the name of directory/filename of the upload.
+		    if ($upload_success) {
+		        $product->image_url = $upload_success;
+		        $product->save();
+		        return response()->json("/uploads/".$upload_success, 200);
+		    }
+		    // Else, return error 400
+		    else {
+		        return response()->json('error', 400);
+		    }
+
+		} catch (Exception $e) {
+			return response()->json('error', 400);
+		}
+		
+	}
+
+	public function deleteHeaderImage($product_slug, Request $request){
+		$sidebar = "Products";
+		
+		try {
+			$product = Product::where('slug', $product_slug)->where('company_id', Auth::user()->company->id)->firstOrFail();
+			$title = $product->name;
+
+		    //delete existing image
+			if(File::exists(public_path()."/uploads/".$product->image_url)) {
+			    File::delete(public_path()."/uploads/".$product->image_url);
+			    $product->image_url = null;
+		        $product->save();
+				$success = "Header image deleted!";
+
+				return back()->with(compact('sidebar', 'product', 'title', 'success'));
+			} else {
+				$success = "No header image to delete!!";
+				return back()->with(compact('sidebar', 'product', 'title', 'success'));
+			}
+
+		} catch (Exception $e) {
+			return response()->json('Product not found!', 400);
 		}
 	}
 }
