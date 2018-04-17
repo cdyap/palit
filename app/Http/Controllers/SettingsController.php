@@ -15,6 +15,10 @@ class SettingsController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+    public function __construct(){
+        $this->middleware('check_session');
+    }
+
     public function index()
     {
         //

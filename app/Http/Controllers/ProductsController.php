@@ -17,6 +17,10 @@ use Illuminate\Database\Query\Builder;
 class ProductsController extends Controller
 {
     //
+    public function __construct(){
+        $this->middleware('check_session');
+	}
+
 	public function index(){
     	$sidebar = "Products";
     	$title = "All products";

@@ -10,10 +10,9 @@ class AdminController extends Controller
 {
     //
 
-     public function __construct(){
-        $this->middleware('web');
-        // $this->middleware('check_company');
-	 }
+    public function __construct(){
+        $this->middleware('check_session');
+	}
 
     public function index(){
     	$sidebar = "Dashboard";
