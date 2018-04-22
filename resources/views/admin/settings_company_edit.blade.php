@@ -25,9 +25,17 @@
 						<label for="name">Name:*</label>
 						<input type="text" name="name" class="form-control {{ $errors->has('name') ? 'has-error' : ''}}" required value="{{ $company->name }}">
 					</div>
+					<div class="form-group">
+						<label for="name">Currency:*</label>
+						<select name="currency" class="form-control {{$errors->has('currency') ? 'has-error' : ''}}" required>
+							@foreach($currencies as $currency)
+								<option value="{{$currency->value_2}},{{$currency->value}}" {{($currency->value_2.$currency->value == $company->currency.$company->currency_name) ? "selected" : ""}}>{{$currency->value . " (" . $currency->value_2 .")"}}</option>
+							@endforeach
+						</select>
+					</div>
 					<p class="note" style="margin-bottom:0;margin-top:10px;">* Required field</p>	
 					<br>
-					<button type="submit" class="button z-depth-1">Save company details</button>
+					<button type="submit" class="button">Save company details</button>
 				</form>
 			</div>
 		</div>

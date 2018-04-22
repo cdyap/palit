@@ -16,6 +16,6 @@ class Shipping extends Model
     }
 
     public function getViewPriceAttribute(){
-        return $this->currency . number_format($this->price, 2, '.', ',');
+        return $this->currency . " " . number_format($this->price, 2, '.', ',');
     }
 }

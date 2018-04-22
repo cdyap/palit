@@ -250,9 +250,60 @@ input[type=number]::-webkit-outer-spin-button {
     margin: 0; 
 }
 
-form .has-error {
+form .has-error, form .error {
 	border-color: red;
 }
+
+/* The switch - the box around the slider */
+.switch {
+	position: relative;
+	display: inline-block;
+	width: 60px;
+	height: 34px;
+	input {display:none;}
+}
+
+/* The slider */
+.slider {
+	position: absolute;
+	cursor: pointer;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: #ccc;
+	-webkit-transition: .2s;
+	transition: .2s;
+
+	&:before {
+		position: absolute;
+		content: "";
+		height: 26px;
+		width: 26px;
+		left: 4px;
+		bottom: 4px;
+		background-color: white;
+		-webkit-transition: .2s;
+		transition: .2s;
+	}
+}
+
+input:checked + .slider {
+  background-color: $accent;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px $accent;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(26px);
+  -ms-transform: translateX(26px);
+  transform: translateX(26px);
+}
+
+
+
 // Typography
 a {
 	color: $accent;
@@ -294,7 +345,21 @@ h4.with-underline:before, h1.with-underline:before {
 .note, .caption {
 	color: $grey;
 	font-size: 0.8em;
+} 
 
+p.error-note, label.error {
+	color: $red;
+	font-size:0.8rem;
+	margin-left:5px;
+}
+
+p.error-note {
+	margin-bottom:30px;
+}
+
+.payment_method .error, .payment_method .error-note {
+	margin-top: 30px;
+	margin-bottom:0;
 }
 
 .caption {

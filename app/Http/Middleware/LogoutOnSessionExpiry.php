@@ -21,7 +21,7 @@ class LogoutOnSessionExpiry
             $now = Carbon::now();
             $last_login = Carbon::parse(Auth::user()->last_login);
 
-            if($now > $last_login) {
+            if($now > $last_login->addHour()) {
                 Auth::logout();
                 return redirect()->to('/')->with('warning', 'Your session has expired because your account is deactivated.');
             }

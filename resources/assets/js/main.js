@@ -42,6 +42,59 @@ $(document).on('turbolinks:load',function(){
 	    $(window).scrollTop($(window).scrollTop()-1);
 	});
 
+	$('body.admin.index.AdminController').ready(function(){
+		$('.auto-confirm input[type="checkbox"]').on('change', function(){
+			toggleAutoConfirm(this.checked);
+		});
+
+		function toggleAutoConfirm(auto_confirm_orders){
+
+			token = $('meta[name="csrf-token"]').attr('content');
+
+			var data_for_sending = {};
+			data_for_sending.auto_confirm_orders = auto_confirm_orders;
+			data_for_sending._token = token;
+			// data_for_sending._method = "PATCH";
+			
+			url = "/orders/toggleAutoConfirm";
+
+			$.ajaxSetup({
+			    beforeSend: function(xhr, type) {
+			        if (!type.crossDomain) {
+			            xhr.setRequestHeader('X-CSRF-Token', $('meta[name="csrf-token"]').attr('content'));
+			        }
+			    },
+			});
+			$.ajax({
+			    dataType: 'JSON',
+			    method: 'PATCH',
+			    url: url,
+			    data: JSON.stringify(data_for_sending),
+			    contentType: "json",
+			    processData: false,
+			    success: function(a) {
+			    	if(a.success) {
+				    	$('.alerts-holder').prepend('<div class="alert alert-success alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>Auto-confirm orders <strong>'+a.message+'</strong>!<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+				    }
+			    }
+		  	});	
+
+		  	setTimeout(removeAddedAlerts, 5000);
+		}
+
+		function removeAddedAlerts(){
+			$('.alerts-holder .alert:last').alert('close');
+
+			if ($('.alerts-holder .alert').length > 1) {
+				setTimeout(repeatRemoveAddedAlerts, 3000);
+			}		
+		}
+
+		function repeatRemoveAddedAlerts(){
+			removeAddedAlerts();
+		}
+	});
+
 	$('body.order_page').ready(function(){
 		$('.dropright').on('shown.bs.dropdown', function(){
 			$(this).addClass('active');
@@ -63,14 +116,54 @@ $(document).on('turbolinks:load',function(){
 			$('.shipping'+$(this).val()).addClass('selected');
 		});
 
+		if ($('#checkout_form').length === 1) {
+			$('#checkout_form').validate({
+				rules: {
+					email: {
+						required: true,
+						email:true,
+					},
+					first_name: {
+						required: true,
+					},
+					last_name: {
+						required: true,
+					},
+					country_code: {
+						required: true,
+					},
+					contact_number: {
+						required: true,
+						digits: true,
+					},
+					shipping_address_1: {
+						required: true,
+					},
+					city: {
+						required: true,
+					},
+					zip_code: {
+						required: true,
+						digits: true
+					},
+					country: {
+						required: true,
+					}
+				},
+				submitHandler: function(form) {
+				    form.submit();
+				}
+			});
+		}
+
 		function changeQuantity(companySlug, rowId, quantity){
 
 			token = $('meta[name="csrf-token"]').attr('content');
 
 			var data_for_sending = {};
 			data_for_sending.rowId = rowId;
-			data_for_sending.slug = companySlug
-			data_for_sending.quantity = quantity
+			data_for_sending.slug = companySlug;
+			data_for_sending.quantity = quantity;
 			data_for_sending._token = token;
 			// data_for_sending._method = "PATCH";
 			
@@ -106,7 +199,7 @@ $(document).on('turbolinks:load',function(){
 
 			var data_for_sending = {};
 			data_for_sending.rowId = rowId;
-			data_for_sending.slug = companySlug
+			data_for_sending.slug = companySlug;
 			data_for_sending._token = token;
 			// data_for_sending._method = 'PATCH';
 			

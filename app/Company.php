@@ -11,7 +11,7 @@ class Company extends Model
     use Sluggable;
 
     public $timestamps = false;
-    protected $fillable = ['name'];
+    protected $fillable = ['name', 'currency', 'currency_name'];
 
     public function users(){
     	return $this->hasMany('App\User');

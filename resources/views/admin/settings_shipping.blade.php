@@ -42,7 +42,7 @@
 								<tr class="shipping_{{$shipping->id}}">
 									<td>{{$shipping->name}}</td>
 									<td>{{$shipping->description}}</td>
-									<td class="text-right">{{$shipping->price}}</td>
+									<td class="text-right">{{$shipping->view_price}}</td>
 									<td class='text-center availability {{(!($shipping->is_available)) ? "text-red" : "text-green"}}' data-toggle="tooltip" data-placement="top" title="{{(!($shipping->is_available)) ? 'Unavailable' : 'Available'}}"><i class="fas fa-circle" ></i></td>
 									<td>
 										<div class="btn-group dropright float-right">

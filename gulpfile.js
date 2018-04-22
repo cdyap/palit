@@ -36,6 +36,7 @@ elixir((mix) => {
             'dropzone/dist/dropzone.js',     
             'frenzyapp/turbolinks.js',     
             'onmount/index.js',     
+            'jquery-validation/dist/jquery.validate.min.js',     
        ],
        'public/js/vendor.js', // 2nd param is the output file
        'node_modules')        // 3rd param is saying "look in /node_modules/ for these scripts"

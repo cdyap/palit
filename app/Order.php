@@ -12,4 +12,8 @@ class Order extends Model
     public function company(){
     	return $this->belongsTo('App\Company');
     }
+
+    public function order_items(){
+    	return $this->hasMany('App\OrderItem');
+    }
 }

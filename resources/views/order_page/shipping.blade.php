@@ -36,19 +36,8 @@
                     </thead>
                     <tbody>
                         @foreach($cart->where('name', 'Product') as $item)
-                            <?php $i = 0; ?>
-                            <?php $description = ""; ?>
-                            @foreach($product_variant_columns->where('name', 'variant_'.$item->id->id) as $column)
-                                @if(!empty($column))
-                                <?php $i = $i + 1; ?>
-                                @if($i != 1)
-                                    <?php $description = $description . ", "; ?>
-                                @endif
-                                <?php $description = $description . $column->value . ": " . $item->options->variant->{"attribute_" . $i}; ?>
-                                @endif
-                            @endforeach
                             <tr>
-                                <td class="align-middle">{{$item->id->name}}<br><span class="text-grey">{{$description}}</span></td>
+                                <td class="align-middle">{{$item->id->name}}<br><span class="text-grey">{{$item->options->description}}</span></td>
                                 <td class="text-right align-middle">{{$item->qty}}</td>
                                 <td class="text-right align-middle">{{$item->options->currency . " " . number_format($item->subtotal, 2, '.', ',')}}</td>
                             </tr>
@@ -78,7 +67,6 @@
                                 </tr>
                             @endif
                         @endforeach
-                        
                     </tbody>
                 </table>
 			</div>

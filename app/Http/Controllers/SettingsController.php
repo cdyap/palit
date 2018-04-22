@@ -41,8 +41,9 @@ class SettingsController extends Controller
         $sidebar = "Settings";
         $title = "Edit company";
         $company = Auth::user()->company;
+        $currencies = AppSettings::where('name', 'currency')->get();
 
-        return view('admin.settings_company_edit',compact('sidebar', 'title', 'company'));
+        return view('admin.settings_company_edit',compact('sidebar', 'title', 'company', 'currencies'));
     }
 
     public function company_update(Request $request){
@@ -50,10 +51,16 @@ class SettingsController extends Controller
             $company = Auth::user()->company;
 
             $validatedData = $request->validate([
-                'name' => 'required|unique:companies,name,'.$company->id
+                'name' => 'required|unique:companies,name,'.$company->id,
+                'currency' => 'required'
             ]);
 
-            $company->update($request->all());
+            $company->name = $request->name;
+            $currency_input = explode(',', $request->currency);
+            $company->currency = $currency_input[0];
+            $company->currency_name = $currency_input[1];
+
+            $company->save();
 
             return redirect('/settings/company')->with(['success' => "Company information updated!"]);
 

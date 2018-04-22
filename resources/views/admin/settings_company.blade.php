@@ -28,6 +28,8 @@
 				</div>
 				<p class="caption">NAME:</p>
 				<h5>{{$company->name}}</h5>
+				<p class="caption">CURRENCY:</p>
+				<h5>{{$company->currency_name}} ({{$company->currency}})</h5>
 			</div>
 		</div>
 		<div class="col-xs-12 col-md-4">

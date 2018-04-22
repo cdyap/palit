@@ -19,9 +19,6 @@
                                 <h4 class="with-underline">{{$collection->name}}</h4>
                                 <p class="card-text">{{$collection->description}}</p>
                             </div>
-                            <div class="card-footer">
-                                <small class="text-muted">Last updated 3 mins ago</small>
-                            </div>
                         </div>
                     @endforeach
                 </div>
@@ -45,9 +42,6 @@
                             <div class="card-body">
                                 <h4 class="with-underline">{{$product->name}}</h4>
                                 <h5>{{ $product->hasSameVariantPrices() ? $product->view_price() : $product->variants->sortBy('price')->pluck('view_price')->unique()->implode(', ') }}</h5>
-                            </div>
-                            <div class="card-footer">
-                                <small class="text-muted">Last updated 3 mins ago</small>
                             </div>
                         </div>
                         @if($product->variants()->where('is_available', true)->count() > 0)
@@ -113,30 +107,36 @@
                                 </div>
                             </div>
                         @else
-                            <div class="modal product-modal fade bd-example-modal-md" tabindex="-1" role="dialog" id="productModal{{$product->slug}}" aria-labelledby="product Modal" aria-hidden="true">
-                                <div class="modal-dialog modal-md modal-dialog-centered" role="document">
+                            <div class="modal product-modal fade bd-example-modal-lg" tabindex="-1" role="dialog" id="productModal{{$product->slug}}" aria-labelledby="product Modal" aria-hidden="true">
+                                <!-- without variants modal-->
+                                <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
                                     <div class="modal-content">
                                         <div class="modal-header">
-                                            <h4 class="modal-title with-underline" id="exampleModalLabel" style="color: black;">{{$product->name}} INVENTORY</h4>
                                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                             <span aria-hidden="true">&times;</span>
                                             </button>
                                         </div>
-                                        <div class="modal-body" style="margin-top: -40px;">
+                                        <div class="modal-body" style="margin-top:-30px;padding-left:20px;padding-right:20px">
                                             <div class="row">
-                                                <div class="col">
-                                                    <p class="caption">INVENTORY:</p>
-                                                    <h5>{{$product->available_inventory}}</h5>
+                                                <div class="col-xs-12 col-md-6 img-div">
+                                                    @if(!empty($product->image_url))
+                                                        <img class="img-responsive" src="/uploads/{{$product['image_url']}}" alt="Image">
+                                                    @endif
                                                 </div>
-                                                <div class="col">
-                                                    <p class="caption">INCOMING:</p>
-                                                    <h5>{{$product->incoming_inventory}}</h5>
+                                                <div class="col-xs-12 col-md-6">
+                                                    <h2 class="with-underline">{{$product->name}}</h2>
+                                                    <h4>{{$product->view_price()}}</h4>
+                                                    <h6>{{$product->description}}</h6>
+                                                    <form action="/{{$company->slug}}/addToCart" method="POST">
+                                                        <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                                                        <input type="hidden" name="{{$product->id}}" value="no-v">
+                                                        <div class="product-variants-block">
+                                                            <br>
+                                                            <button type="submit" class="button add-to-cart" >Add to cart</button>
+                                                        </div>
+                                                    </form>
                                                 </div>
-                                                <div class="col">
-                                                    <p class="caption">ORDERS:</p>
-                                                    <h5></h5>
-                                                </div>
-                                            </div>
+                                            </div>  
                                         </div>
                                     </div>
                                 </div>
@@ -183,19 +183,9 @@
                                         </thead>
                                         <tbody>
                                             @foreach($cart->where('name', 'Product') as $item)
-                                                <?php $i = 0; ?>
-                                                <?php $description = ""; ?>
-                                                @foreach($product_variant_columns->where('name', 'variant_'.$item->id->id) as $column)
-                                                    @if(!empty($column))
-                                                    <?php $i = $i + 1; ?>
-                                                    @if($i != 1)
-                                                        <?php $description = $description . ", "; ?>
-                                                    @endif
-                                                    <?php $description = $description . $column->value . ": " . $item->options->variant->{"attribute_" . $i}; ?>
-                                                    @endif
-                                                @endforeach
+                                                
                                                 <tr class="cart-item {{$item->rowId}}">
-                                                    <td class="align-middle">{{$item->id->name}}<br><span class="text-grey">{{$description}}</span></td>
+                                                    <td class="align-middle">{{$item->id->name}}<br><span class="text-grey">{{$item->options->description}}</span></td>
                                                     <td class="align-middle text-right">{{$item->options->currency . " " . number_format($item->price, 2, '.', ',')}}</td>
                                                     <td class="text-right align-middle"><input type="number" style="width:100px;float:right;" name="quantity[{{$item->rowId}}]" class="item-quantity text-right form-control {{ $errors->has('price') ? 'has-error' : ''}}"  min="1" {{(!($item->id->overselling_allowed)) ? "max=".$item->id->available_inventory : ""}} value="{{$item->qty}}" required data-company="{{$company->slug}}" data-rowId="{{$item->rowId}}" ></td>
                                                     <td class="text-right align-middle item_price">{{$item->options->currency . " " . number_format($item->price*$item->qty, 2, '.', ',')}}</td>

@@ -58,6 +58,7 @@ Route::group(['middleware' => 'auth', 'web'], function () {
 
 	//orders
 	Route::get('/orders', 'OrdersController@index');
+	Route::patch('/orders/toggleAutoConfirm', 'OrdersController@toggleAutoConfirm');
 
 	//inventory
 	Route::get('/inventory', 'InventoryController@index');
@@ -93,6 +94,11 @@ Route::get('/{company_slug}/shipping', 'OrdersController@shipping');
 Route::post('/{company_slug}/checkout', 'OrdersController@checkout');
 Route::get('/{company_slug}/checkout', 'OrdersController@checkout');
 
+Route::post('/{company_slug}/order/store', 'OrdersController@store');
+
 //helper functions
 Route::patch('/removeFromCart/{slug}/{rowId}', 'OrdersController@removeFromCart');
 Route::patch('/changeQuantity/{slug}/{rowId}', 'OrdersController@changeQuantity');
+
+//view order page
+Route::get('/{company_slug}/order/{order}', 'OrdersController@view_order');

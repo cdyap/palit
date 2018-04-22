@@ -16,7 +16,8 @@ class AdminController extends Controller
 
     public function index(){
     	$sidebar = "Dashboard";
-    	return view('admin.index',compact('sidebar'));
+        $company = Auth::user()->company;
+    	return view('admin.index',compact('sidebar', 'company'));
     }
 
     public function products(){
