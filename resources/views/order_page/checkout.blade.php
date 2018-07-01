@@ -174,7 +174,7 @@
                         </tr>
                         <tr class="text-bold">
                             <td colspan="2">Total amount due:</td>
-                            <td class="text-right align-middle">{{$cart_total}}</td>
+                            <td class="text-right align-middle">{{$company->currency}} {{$cart_total}}</td>
                         </tr>
                     </tbody>
                 </table>

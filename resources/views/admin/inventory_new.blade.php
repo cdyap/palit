@@ -23,7 +23,7 @@
 	</div>
 	<div class="row">
 		<div class="col-lg-8 col-xs-12">
-			<h4>1. Add products and variants to delivery cart</h4>
+			<h4 id="AddItemToCart">1. Add products and variants to delivery cart</h4>
 			<p class="caption">SELECT PRODUCT TO ADD</p>
 			<form action="/inventory/getProduct" method="GET" class="select-product">
 				<input type="hidden" name="_token" value="{{ csrf_token() }}">
@@ -43,15 +43,15 @@
 					<div class="row">
 						<div class="col">
 							<p class="caption">INVENTORY:</p>
-							<h5 class="product-inventory">{{$product->total_inventory}}</h5>
+							<h5 class="product-inventory"></h5>
 						</div>
 						<div class="col">
 							<p class="caption">INCOMING:</p>
-							<h5 class="product-incoming">{{$product->total_inventory}}</h5>
+							<h5 class="product-incoming"></h5>
 						</div>
 						<div class="col">
 							<p class="caption">ORDERS:</p>
-							<h5 class="product-orders">{{$product->total_inventory}}</h5>
+							<h5 class="product-orders"></h5>
 						</div>
 					</div>
 					<br>
@@ -59,7 +59,7 @@
 						<div class="col-xs-6 col-sm-4">
 							<div class="form-group">
 								<label for="quantity">Quantity to add:</label>
-								<input type="number" class="form-control product-quantity" name="xx" min="0" data-product="{{$product->name}}">
+								<input type="number" class="form-control product-quantity" name="xx" min="0" data-product="">
 							</div>
 						</div>
 					</div>
@@ -118,6 +118,7 @@
 						</tbody>
 					</table>
 					<br>
+					{{-- <a href="#AddItemToCart" class="button ghost">Add more items</a> --}}
 					<button type="submit" class="button">Add delivery</button>	
 				</div>
 			</form>

@@ -58,7 +58,7 @@
 				@endif
 
 				<p class="caption">TOTAL QUANTITY:</p>
-				<h5 id="total_inventory">{{ (empty($product->total_inventory)) ? 0 : $product->total_inventory }}</h5>
+				<h5 id="available_inventory">{{ (empty($product->available_inventory)) ? 0 : $product->available_inventory }}</h5>
 				
 			</div>
 		</div>
@@ -95,9 +95,9 @@
 	</div>
 
 	<div class="row" >
-		@if($product->variant_columns()->count() > 0) 
+		@if($variant_columns->count() > 0) 
 			<div class="col-xs-12 col-lg-9">
-				<div class="block table-responsive-sm">
+				<div class="block table-responsive-sm" id="AddVariant">
 					
 					<a href="#" data-toggle="modal" data-target="#addVariantTypes" class="modal-launcher-link float-right" style="margin-left:7px;margin-right:5px;">Edit columns</a>
 					<a href="javascript:void(0);" onclick="document.getElementById('add_variant_block').classList.remove('hide')" class="float-right"  style="margin-left:7px;margin-right:7px;">Add variants</a>
@@ -107,7 +107,7 @@
 						<thead>
 							<tr>
 								<th style="width:10px;"></th>
-								@foreach($product->variant_columns()->sortBy('value_2') as $column)
+								@foreach($variant_columns as $column)
 									<th>{{$column->value}}</th>
 								@endforeach
 								<th class="text-right">Quantity</th>
@@ -119,18 +119,18 @@
 						<tbody data-entityname="variants">
 							@if($product->variants->count() == 0)
 								<tr id="no_variants_yet">
-									<td colspan="{{$product->variant_columns()->count() + 5}}">No variants yet. Click <a href="javascript:void(0);" onclick="document.getElementById('add_variant_block').classList.remove('hide')" >here</a> to add one.</td>
+									<td colspan="{{$variant_columns->count() + 5}}">No variants yet. Click <a href="javascript:void(0);" onclick="document.getElementById('add_variant_block').classList.remove('hide')" >here</a> to add one.</td>
 								</tr>
 							@else
 								@foreach($product->variants->sortBy('position') as $variant)
 									<tr class="variant_{{$variant->id}}" data-id="{{$variant->id}}" data-inventory="{{$variant->inventory}}" data-price="{{$variant->price}}" data-itemId="{{{ $variant->id }}}">
 										<td class="sortable-handle"><i class="fas fa-arrows-alt-v"></i></td>
-										@foreach($product->variant_columns()->sortBy('value_2') as $column)
+										@foreach($variant_columns as $column)
 											<td class="{{$column->value_2}}">{{ $variant->{$column->value_2} }}</td>
 										@endforeach
 										
-										<td class="text-right">{{$variant->inventory}}</td>
-										<td class="text-right">{{$variant->view_price()}}</td>
+										<td class="text-right">{{$variant->available_inventory}}</td>
+										<td class="text-right">{{$product->currency}} {{$variant->view_price}}</td>
 										<td class='text-center availability {{(!($variant->is_available)) ? "text-red" : "text-green"}}' data-toggle="tooltip" data-placement="top" title="{{(!($variant->is_available)) ? 'Unavailable' : 'Available'}}"><i class="fas fa-circle" ></i></td>
 										<td>
 											<div class="btn-group dropright float-right">
@@ -161,23 +161,23 @@
 															<div class="modal-body">
 																<h5>Are you sure you want to delete this variant? This cannot be undone.</h5>
 																@if(isset($variant->attribute_1))
-																	<p class="caption">{{ $product->variant_columns()->where('value_2', 'attribute_1')->first()->value }}</p>
+																	<p class="caption">{{ $variant_columns->where('value_2', 'attribute_1')->first()->value }}</p>
 																	<h5>{{$variant->attribute_1}}</h5>
 																@endif
 																@if(isset($variant->attribute_2))
-																	<p class="caption">{{ $product->variant_columns()->where('value_2', 'attribute_2')->first()->value }}</p>
+																	<p class="caption">{{ $variant_columns->where('value_2', 'attribute_2')->first()->value }}</p>
 																	<h5>{{$variant->attribute_2}}</h5>
 																@endif
 																@if(isset($variant->attribute_3))
-																	<p class="caption">{{ $product->variant_columns()->where('value_2', 'attribute_3')->first()->value }}</p>
+																	<p class="caption">{{ $variant_columns->where('value_2', 'attribute_3')->first()->value }}</p>
 																	<h5>{{$variant->attribute_3}}</h5>
 																@endif
 																@if(isset($variant->attribute_4))
-																	<p class="caption">{{ $product->variant_columns()->where('value_2', 'attribute_4')->first()->value }}</p>
+																	<p class="caption">{{ $variant_columns->where('value_2', 'attribute_4')->first()->value }}</p>
 																	<h5>{{$variant->attribute_4}}</h5>
 																@endif
 																@if(isset($variant->attribute_5))
-																	<p class="caption">{{ $product->variant_columns()->where('value_2', 'attribute_5')->first()->value }}</p>
+																	<p class="caption">{{ $variant_columns->where('value_2', 'attribute_5')->first()->value }}</p>
 																	<h5>{{$variant->attribute_5}}</h5>
 																@endif
 															</div>
@@ -207,27 +207,28 @@
 									</button>
 								</div>
 									<div class="modal-body">
-										<p class="note">Enter new columns consecutively.<br>Delete a column by leaving the textbox empty. This will erase all variant data of that column.<br>Deleting all columns will also erase all variants.</p>
+										<p class="note">To delete a column, empty its textbox. This will also erase all corresponding variant data.<br>Deleting all columns will also erase all variants of this product.</p>
+
 										<div class="form-row">
 											<div class="col-md">
 												<label for="attribute_1">Column 1:</label>
-												<input type="text" name="attribute_1" class="form-control {{ $errors->has('attribute_1') ? 'has-error' : ''}}" value="{{ $product->variant_columns()->where('value_2', 'attribute_1')->count() == 1 ? $product->variant_columns()->where('value_2', 'attribute_1')->first()->value : "" }}">
+												<input type="text" name="attribute_1" class="form-control {{ $errors->has('attribute_1') ? 'has-error' : ''}}" value="{{ $variant_columns->where('value_2', 'attribute_1')->count() == 1 ? $variant_columns->where('value_2', 'attribute_1')->first()->value : "" }}">
 											</div>
 											<div class="col-md">
 												<label for="attribute_2">Column 2:</label>
-												<input type="text" name="attribute_2" class="form-control {{ $errors->has('attribute_2') ? 'has-error' : ''}}" value="{{ $product->variant_columns()->where('value_2', 'attribute_2')->count() == 1 ? $product->variant_columns()->where('value_2', 'attribute_2')->first()->value : "" }}" {{ $product->variant_columns()->where('value_2', 'attribute_2')->count() == 1 || $product->variant_columns()->where('value_2', 'attribute_1')->count() == 1 ? "" : "disabled" }}>
+												<input type="text" name="attribute_2" class="form-control {{ $errors->has('attribute_2') ? 'has-error' : ''}}" value="{{ $variant_columns->where('value_2', 'attribute_2')->count() == 1 ? $variant_columns->where('value_2', 'attribute_2')->first()->value : "" }}" {{ $variant_columns->where('value_2', 'attribute_2')->count() == 1 || $variant_columns->where('value_2', 'attribute_1')->count() == 1 ? "" : "disabled" }}>
 											</div>
 											<div class="col-md">
 												<label for="attribute_3">Column 3:</label>
-												<input type="text" name="attribute_3" class="form-control {{ $errors->has('attribute_3') ? 'has-error' : ''}}" value="{{ $product->variant_columns()->where('value_2', 'attribute_3')->count() == 1 ? $product->variant_columns()->where('value_2', 'attribute_3')->first()->value : "" }}" {{ $product->variant_columns()->where('value_2', 'attribute_3')->count() == 1 || $product->variant_columns()->where('value_2', 'attribute_2')->count() == 1 ? "" : "disabled" }}>
+												<input type="text" name="attribute_3" class="form-control {{ $errors->has('attribute_3') ? 'has-error' : ''}}" value="{{ $variant_columns->where('value_2', 'attribute_3')->count() == 1 ? $variant_columns->where('value_2', 'attribute_3')->first()->value : "" }}" {{ $variant_columns->where('value_2', 'attribute_3')->count() == 1 || $variant_columns->where('value_2', 'attribute_2')->count() == 1 ? "" : "disabled" }}>
 											</div>
 											<div class="col-md">
 												<label for="attribute_4">Column 4:</label>
-												<input type="text" name="attribute_4" class="form-control {{ $errors->has('attribute_4') ? 'has-error' : ''}}" value="{{ $product->variant_columns()->where('value_2', 'attribute_4')->count() == 1 ? $product->variant_columns()->where('value_2', 'attribute_4')->first()->value : "" }}" {{ $product->variant_columns()->where('value_2', 'attribute_4')->count() == 1 || $product->variant_columns()->where('value_2', 'attribute_3')->count() == 1 ? "" : "disabled" }}>
+												<input type="text" name="attribute_4" class="form-control {{ $errors->has('attribute_4') ? 'has-error' : ''}}" value="{{ $variant_columns->where('value_2', 'attribute_4')->count() == 1 ? $variant_columns->where('value_2', 'attribute_4')->first()->value : "" }}" {{ $variant_columns->where('value_2', 'attribute_4')->count() == 1 || $variant_columns->where('value_2', 'attribute_3')->count() == 1 ? "" : "disabled" }}>
 											</div>
 											<div class="col-md">
 												<label for="attribute_5">Column 5:</label>
-												<input type="text" name="attribute_5" class="form-control {{ $errors->has('attribute_5') ? 'has-error' : ''}}" value="{{ $product->variant_columns()->where('value_2', 'attribute_5')->count() == 1 ? $product->variant_columns()->where('value_2', 'attribute_5')->first()->value : "" }}" {{ $product->variant_columns()->where('value_2', 'attribute_5')->count() == 1 || $product->variant_columns()->where('value_2', 'attribute_4')->count() == 1 ? "" : "disabled" }}>
+												<input type="text" name="attribute_5" class="form-control {{ $errors->has('attribute_5') ? 'has-error' : ''}}" value="{{ $variant_columns->where('value_2', 'attribute_5')->count() == 1 ? $variant_columns->where('value_2', 'attribute_5')->first()->value : "" }}" {{ $variant_columns->where('value_2', 'attribute_5')->count() == 1 || $variant_columns->where('value_2', 'attribute_4')->count() == 1 ? "" : "disabled" }}>
 											</div>
 										</div>
 									</div>
@@ -249,15 +250,15 @@
 					<form action="/products/{{$product->slug}}/addVariant" method="POST" id="add_variant_form">
 						<input type="hidden" name="_token" value="{{ csrf_token() }}">
 						@for ($i = 1; $i <= 5; $i++)
-							@if($product->variant_columns()->where('value_2', 'attribute_'.$i)->count() == 1)
+							@if($variant_columns->where('value_2', 'attribute_'.$i)->count() == 1)
 								<div class="form-group">
-									<label for="attribute_{{$i}}">{{$product->variant_columns()->where('value_2', 'attribute_'.$i)->first()->value}}:</label>
+									<label for="attribute_{{$i}}">{{$variant_columns->where('value_2', 'attribute_'.$i)->first()->value}}:</label>
 									<input type="text" name="attribute_{{$i}}" class="form-control" value="">
 								</div>
 							@endif
 						@endfor		
 						<div class="form-group">
-							<label for="inventory">Quantity:</label>
+							<label for="inventory">Initial quantity:</label>
 							<input type="number" name="inventory" class="form-control" value="0" min="0" required>
 						</div>				
 						<div class="form-group">
@@ -270,7 +271,7 @@
 						</div>
 					</form>
 				</div>
-				<div class="block hide" id="edit_variant_block" style="margin-top:0px;">
+				<div class="block hide" id="edit_variant_block">
 					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
 					<span aria-hidden="true">&times;</span>
 					</button>
@@ -279,15 +280,15 @@
 						<input type="hidden" name="_token" value="{{ csrf_token() }}">
 						<input type="hidden" name="_method" value="PATCH">
 						@for ($i = 1; $i <= 5; $i++)
-							@if($product->variant_columns()->where('value_2', 'attribute_'.$i)->count() == 1)
+							@if($variant_columns->where('value_2', 'attribute_'.$i)->count() == 1)
 								<div class="form-group">
-									<label for="attribute_{{$i}}">{{$product->variant_columns()->where('value_2', 'attribute_'.$i)->first()->value}}:</label>
+									<label for="attribute_{{$i}}">{{$variant_columns->where('value_2', 'attribute_'.$i)->first()->value}}:</label>
 									<input type="text" name="attribute_{{$i}}" class="form-control" value="">
 								</div>
 							@endif
 						@endfor		
 						<div class="form-group">
-							<label for="inventory">Quantity:</label>
+							<label for="inventory">Initial quantity:</label>
 							<input type="number" name="inventory" class="form-control" value="" min="0" required>
 						</div>				
 						<div class="form-group">
@@ -317,7 +318,11 @@
 									</button>
 								</div>
 									<div class="modal-body">
-										<p class="note">Enter new columns consecutively.</p>
+										<p class="note">Enter new columns consecutively.
+										@if(!isset($variant->attribute_1))
+											Adding variants will reset this product's current quantity.
+										@endif
+										</p>
 										<div class="form-row">
 											<div class="col-md">
 												<label for="attribute_1">Column 1:</label>

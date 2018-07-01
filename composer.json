@@ -12,12 +12,15 @@
         "frenzy/turbolinks": "^3.2",
         "gloudemans/notify": "^1.0",
         "gloudemans/shoppingcart": "^2.5",
+        "guzzlehttp/guzzle": "^6.3",
         "laravel/framework": "5.5.*",
         "laravel/tinker": "~1.0",
         "nesbot/carbon": "^1.22",
+        "pda/pheanstalk": "^3.1",
         "rutorika/sortable": "^4.2"
     },
     "require-dev": {
+        "barryvdh/laravel-debugbar": "^3.1",
         "filp/whoops": "~2.0",
         "fzaninotto/faker": "~1.4",
         "mockery/mockery": "~1.0",

@@ -11,17 +11,35 @@
 		</div>
 	@endif
 	</div>
+	<a href="/{{$company->slug}}" target="_new">Order page</a>
 	<div class="row">
-		<form action="/orders/toggleAutoConfirm" method="POST" id="toggleAutoConfirmForm">
-			<input type="hidden" name="_token" value="{{ csrf_token() }}">
-			<input type="hidden" name="_method" value="PATCH">
-			<div class="auto-confirm">
-				<label class="switch">
-				<input type="checkbox" {{($company->auto_confirm_orders) ? "checked" : ""}} value="true" name="auto_confirm_orders">
-				<span class="slider"></span>
-				</label>
-				<p>Auto-confirm orders</p>
+		@if(Auth::user()->unreadNotifications()->count() > 0)
+			<table class="table table-striped table-hover">
+				<thead>
+					<tr>
+						<th></th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach(Auth::user()->unreadNotifications as $notification)
+						<tr>
+							<td>{{$notification->data['message']}}</td>
+						</tr>
+					@endforeach
+				</tbody>
+			</table>
+			
+		@endif		
+	</div>
+	<div class="row">
+		<div class="col-xs-12 col-sm-4 col-md-3">
+			<div class="block">
+				<h4>Pending orders:</h4>
+				<p class="caption">Total:</p>
+				<h3>{{$pending_orders->where('date_fulfilled', null)->count()}}</h3>
+				<p class="caption">Lag to confirmation:</p>
+				<h3>{{round($lead_time_payment[0]->avg)}} days</h3>
 			</div>
-		</form>		
+		</div>
 	</div>
 @endsection

@@ -11,6 +11,7 @@ use \App\AppSettings;
 use Carbon\Carbon;
 use Auth;
 use File;
+use DB;
 use Validator;
 use Illuminate\Database\Query\Builder;
 
@@ -25,21 +26,31 @@ class ProductsController extends Controller
     	$sidebar = "Products";
     	$title = "All products";
     	$company = Auth::user()->company;
-    	$products = Product::orderBy('name')->where('company_id', $company->id)->get();
+    	$products = Product::with('variants','variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'fulfilledOrders')->select('id', 'name', 'description', 'quantity', 'slug', 'is_shipped', 'is_available')->orderBy('name', 'asc')->where('company_id', $company->id)->get();
 
     	$available_products = $products->where('is_available', true);
     	$unavailable_products = $products->where('is_available', false);
 
-    	return view('admin.products',compact('sidebar', 'title', 'products', 'available_products', 'unavailable_products'));
+    	$variant_columns = DB::table('settings')->select("name")->where('company_id', $company->id)->whereIn('name', preg_filter('/^/', 'variant_',$products->pluck('id')->toArray()))->orderBy('value_2')->get()->unique();
+
+    	$product_ids_with_variant_columns = $variant_columns->map(function ($item, $key) {
+		    return substr($item->name,8);
+		});
+
+    	$products_with_problems = Product::doesntHave('variants')->whereIn('id', $product_ids_with_variant_columns)->orderBy('name')->get();
+
+    	return view('admin.products',compact('sidebar', 'title', 'products', 'available_products', 'unavailable_products', 'products_with_problems'));
     }
 
     public function new(){
     	$sidebar = "Products";
     	$title = "New product";
 
+    	$company = Auth::user()->company;
+
     	$currencies = AppSettings::where('name', 'currency')->get();
 
-    	return view('admin.products_new',compact('sidebar', 'title', 'currencies'));
+    	return view('admin.products_new',compact('sidebar', 'title', 'currencies', 'company'));
     }
 
     public function edit($product_slug){
@@ -49,8 +60,9 @@ class ProductsController extends Controller
 	    	$sidebar = "Products";
 	    	$title = "Edit ". $product->name;
 
-	    	$currencies = AppSettings::where('name', 'currency')->get();
-	    	return view('admin.products_edit',compact('sidebar', 'title', 'product', 'currencies'));
+	    	$company = Auth::user()->company;
+
+	    	return view('admin.products_edit',compact('sidebar', 'title', 'product', 'company'));
 		} catch (Exception $e) {
 			$product = Product::where('slug', $product_slug)->firstOrFail();
 	    	$sidebar = "Products";
@@ -68,7 +80,6 @@ class ProductsController extends Controller
 	    	$validatedData = $request->validate([
 		        'name' => 'required|unique:products,name,'.$product->id,
 		        'description' => 'required',
-		        'currency' => 'required',
 		        'price' => 'sometimes|numeric|min:0',
 		        'quantity' => 'sometimes|nullable|numeric|min:0',
 		  //       'SKU' => Rule::unique('products')->where(function ($query) {
@@ -124,10 +135,11 @@ class ProductsController extends Controller
     }
 
 	public function save(Request $request){
+		$company = Auth::user()->company;
+
 		$validatedData = $request->validate([
 	        'name' => 'required|unique:products,name,NULL,id,deleted_at,NULL',
 	        'description' => 'required',
-	        'currency' => 'required',
 	        'price' => 'numeric|min:0',
 	        'quantity' => 'nullable|numeric|min:0'
 	    ]);
@@ -142,6 +154,9 @@ class ProductsController extends Controller
 		$product->SKU = $request->SKU;
 		$product->is_available = true;
 		$product->quantity = $request->quantity;
+		$product->currency = $company->currency;
+		$product->item_per_shipment = $request->item_per_shipment;
+
 		if (!empty($request->is_shipped)){
 			$product->is_shipped = true;
 		}
@@ -201,16 +216,18 @@ class ProductsController extends Controller
 
 			$variant->save();
 		}
-		return redirect('/products')->with(['success' => " added!", 'emphasize' => $product->name]);
+		return redirect('/products/'.$product->slug)->with(['success' => " added!", 'emphasize' => $product->name]);
 	}
 
 	public function show($product_slug){
 		try {
-			$product = Product::where('slug', $product_slug)->with('variants')->where('company_id', Auth::user()->company->id)->firstOrFail();
+			$product = Product::where('slug', $product_slug)->with('variants', 'variants.product','variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'variants.deliveredVariantQuantity', 'fulfilledOrders', 'variants.fulfilledOrders')->where('company_id', Auth::user()->company->id)->firstOrFail();
 			$title = $product->name;
 			$sidebar = "Products";
 
-			return view('admin.products_show',compact('sidebar', 'product', 'title'));
+			$variant_columns = Setting::where('name', 'variant_' . $product->id)->orderBy('value_2')->get();
+
+			return view('admin.products_show',compact('sidebar', 'product', 'title', 'variant_columns'));
 		} catch (Exception $e) {
 			return redirect('/products');
 		}
@@ -237,6 +254,10 @@ class ProductsController extends Controller
 					try {
 						$new_variant_column->save();
 						$count_variants_added = $count_variants_added + 1;
+
+						//Remove existing quantity if adding a variant
+						$product->quantity = null;
+						$product->save();
 					} catch (Exception $e) {
 
 					}
@@ -249,7 +270,7 @@ class ProductsController extends Controller
 
 				//if no attribute 1, delete all variants
 				$product->variants()->delete();
-				$product->quantity = 0;
+				$product->quantity = null;
 				$product->save();
 			}
 
@@ -372,9 +393,6 @@ class ProductsController extends Controller
 				}
 			}
 			
-
-
-
 			$success = "Variant columns modified!";
 
 			return redirect('/products/'.$product->slug)->with(compact('sidebar', 'product', 'title', 'success'));
@@ -406,7 +424,7 @@ class ProductsController extends Controller
 				->if($request->attribute_3, 'attribute_3', '=', $request->attribute_3)
 				->if($request->attribute_4, 'attribute_4', '=', $request->attribute_4)
 				->if($request->attribute_5, 'attribute_5', '=', $request->attribute_5)
-				->get()->count();
+				->count();
 
 	        if($variant_exists == 0) {
 				$variant = new Variant;
@@ -432,18 +450,31 @@ class ProductsController extends Controller
 				}
 
 				$product->variants()->save($variant);
-				
-				return response()->json([
-					'success' => 1,
-				    'message' => "Variant added!",
-				    'variant' => $variant,
-				    'total_inventory' => $product->total_inventory
-				]);
+
+				// return response()->json([
+				// 	'success' => 1,
+				//     'message' => "Variant added!",
+				//     'variant' => $variant,
+				//     'available_inventory' => 5
+				// ]);
+
+				try {
+					return response()->json([
+						'success' => 1,
+					    'message' => "Variant added!",
+					    'variant' => $variant,
+					    'available_inventory' => $product->available_inventory
+					]);
+				} catch (Exception $e) {
+					return response()->json([
+					    'message' => $e,
+					]);
+				}
 			} else {
 				return response()->json([
 					'success' => 0,
 				    'message' => "Variant already exists!",
-				    'total_inventory' => $product->total_inventory
+				    'available_inventory' => $product->available_inventory
 				]);
 			}
 

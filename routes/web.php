@@ -13,6 +13,8 @@
 
 Auth::routes();
 Route::get('/', 'HomeController@index');
+Route::get('/CheckOrderStatus', 'OrdersController@check_order_status');
+Route::post('/FindOrder', 'OrdersController@find_order');
 
 Route::group(['middleware' => 'auth', 'web'], function () {
     Route::get('/dashboard', 'AdminController@index');
@@ -57,8 +59,11 @@ Route::group(['middleware' => 'auth', 'web'], function () {
 	Route::get('/getProductsForCollection/{collection_slug}', 'CollectionsController@getProductsForCollection');
 
 	//orders
-	Route::get('/orders', 'OrdersController@index');
-	Route::patch('/orders/toggleAutoConfirm', 'OrdersController@toggleAutoConfirm');
+	Route::get('/orders', 'OrdersController@orders_unpaid');
+	Route::get('/orders/paid', 'OrdersController@orders_paid');
+	Route::get('/orders/shipped', 'OrdersController@orders_shipped');
+	Route::post('/orders/{hash}/confirm', 'OrdersController@confirm');
+	Route::post('/orders/{hash}/fulfill', 'OrdersController@fulfill');
 
 	//inventory
 	Route::get('/inventory', 'InventoryController@index');

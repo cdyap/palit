@@ -16,7 +16,7 @@ class AppServiceProvider extends ServiceProvider
         //
 
         //adds controller and action into blade template
-        app('view')->composer('layouts.admin', function ($view) {
+        app('view')->composer(['layouts.admin', 'layouts.app'], function ($view) {
             $action = app('request')->route()->getAction();
 
             $controller = class_basename($action['controller']);

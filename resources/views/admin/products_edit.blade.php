@@ -2,19 +2,24 @@
 
 @section('content')
 	<br>
+	@if ($errors->any())
+		<div class="alerts-holder">
+		    <div class="alert alert-error fade show alert-dismissible z-depth-1-half" role="alert">
+	            @foreach ($errors->all() as $error)
+	                {{ $error }} <br>
+	            @endforeach
+	            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+				<span aria-hidden="true">&times;</span>
+				</button>
+		    </div>
+		</div>
+	@endif
 	<h5><a href="/products/{{$product->slug}}">< {{$product->name}}</a></h5>
 	<div class="row">
 		<div class="col-lg-8">
 			<form action="/products/{{$product->slug}}/update" method="POST" class="with-cascading-disabling">
 				<div class="block">
 					<h4>Product information for <b>{{$product->name}}</b>:</h4>
-					@if ($errors->any())
-					    <div class="alert alert-error fade show z-depth-1-half" role="alert">
-				            @foreach ($errors->all() as $error)
-				                {{ $error }} <br>
-				            @endforeach
-					    </div>
-					@endif
 					<input type="hidden" name="_token" value="{{ csrf_token() }}">
 					<input type="hidden" name="_method" value="PATCH">
 					<div class="form-group">
@@ -32,20 +37,13 @@
 					<p class="note" style="margin-bottom:0;margin-top:10px;">* Required field</p>			
 				</div>
 				<div class="block">
-					<h4>Pricing:</h4>
+					<h4>Pricing:*</h4>
 					<div class="form-row">
-						<div class="form-group col-sm-6">
-							<label for="currency">Currency:*</label>
-							<select name="currency" class="form-control {{ $errors->has('currency') ? 'has-error' : ''}}" required>
-								<option selected="selected" disabled>None</option>
-								@foreach($currencies as $currency)
-									<option value="{{$currency->value_2}}" {{($product->currency == $currency->value_2) ? "selected" : ""}}>{{$currency->value}}</option>
-								@endforeach
-							</select>
-						</div>
 						@if($product->hasSameVariantPrices())
-							<div class="form-group col-sm-6">
-								<label for="price">Price:*</label>
+							<div class="input-group">
+								<div class="input-group-prepend">
+						        	<div class="input-group-text">{{$company->currency_name}} ({{$company->currency}})</div>
+						        </div>
 								<input type="number" name="price" class="form-control {{ $errors->has('price') ? 'has-error' : ''}}"  min="0", value="{{ $product->price }}" required>
 							</div>
 							<div class="col-lg-12">

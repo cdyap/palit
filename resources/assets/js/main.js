@@ -43,44 +43,44 @@ $(document).on('turbolinks:load',function(){
 	});
 
 	$('body.admin.index.AdminController').ready(function(){
-		$('.auto-confirm input[type="checkbox"]').on('change', function(){
-			toggleAutoConfirm(this.checked);
-		});
+		// $('.auto-confirm input[type="checkbox"]').on('change', function(){
+		// 	toggleAutoConfirm(this.checked);
+		// });
 
-		function toggleAutoConfirm(auto_confirm_orders){
+		// function toggleAutoConfirm(auto_confirm_orders){
 
-			token = $('meta[name="csrf-token"]').attr('content');
+		// 	token = $('meta[name="csrf-token"]').attr('content');
 
-			var data_for_sending = {};
-			data_for_sending.auto_confirm_orders = auto_confirm_orders;
-			data_for_sending._token = token;
-			// data_for_sending._method = "PATCH";
+		// 	var data_for_sending = {};
+		// 	data_for_sending.auto_confirm_orders = auto_confirm_orders;
+		// 	data_for_sending._token = token;
+		// 	// data_for_sending._method = "PATCH";
 			
-			url = "/orders/toggleAutoConfirm";
+		// 	url = "/orders/toggleAutoConfirm";
 
-			$.ajaxSetup({
-			    beforeSend: function(xhr, type) {
-			        if (!type.crossDomain) {
-			            xhr.setRequestHeader('X-CSRF-Token', $('meta[name="csrf-token"]').attr('content'));
-			        }
-			    },
-			});
-			$.ajax({
-			    dataType: 'JSON',
-			    method: 'PATCH',
-			    url: url,
-			    data: JSON.stringify(data_for_sending),
-			    contentType: "json",
-			    processData: false,
-			    success: function(a) {
-			    	if(a.success) {
-				    	$('.alerts-holder').prepend('<div class="alert alert-success alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>Auto-confirm orders <strong>'+a.message+'</strong>!<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
-				    }
-			    }
-		  	});	
+		// 	$.ajaxSetup({
+		// 	    beforeSend: function(xhr, type) {
+		// 	        if (!type.crossDomain) {
+		// 	            xhr.setRequestHeader('X-CSRF-Token', $('meta[name="csrf-token"]').attr('content'));
+		// 	        }
+		// 	    },
+		// 	});
+		// 	$.ajax({
+		// 	    dataType: 'JSON',
+		// 	    method: 'PATCH',
+		// 	    url: url,
+		// 	    data: JSON.stringify(data_for_sending),
+		// 	    contentType: "json",
+		// 	    processData: false,
+		// 	    success: function(a) {
+		// 	    	if(a.success) {
+		// 		    	$('.alerts-holder').prepend('<div class="alert alert-success alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>Auto-confirm orders <strong>'+a.message+'</strong>!<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+		// 		    }
+		// 	    }
+		//   	});	
 
-		  	setTimeout(removeAddedAlerts, 5000);
-		}
+		//   	setTimeout(removeAddedAlerts, 5000);
+		// }
 
 		function removeAddedAlerts(){
 			$('.alerts-holder .alert:last').alert('close');
@@ -662,16 +662,17 @@ $(document).on('turbolinks:load',function(){
 						}
 
 						new_variant = new_variant + '<td class="text-right">'+a.variant.inventory+'</td><td class="text-right">'+a.variant.view_price+'</td><td class="text-center availability text-green" data-toggle="tooltip" data-placement="top" title="Available"><i class="fas fa-circle"></i></td><td><div class="btn-group dropright float-right"><div class="option-dropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fas fa-ellipsis-v"></i></div><div class="dropdown-menu"><a class="dropdown-item edit_variant" href="javascript:void(0);">Edit variant</a><a class="dropdown-item toggle_availability_variant" href="javascript:void(0);" data-variant="'+a.variant.id+'">Make unavailable</a><div class="dropdown-divider"></div><a class="dropdown-item delete" onClick="window.location.reload()">Click to refresh and delete this variant.</a></div></div></td></tr>';
-						$('#total_inventory').text(a.total_inventory);
+						$('#available_inventory').text(a.available_inventory);
 						$('table.variants_table').append(new_variant);
 						$('#no_variants_yet').remove();
+						console.log(a);
 				    } else {
 				    	$('.alerts-holder').prepend('<div class="alert alert-error alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>'+a.message+'<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>').fadeTo(2000, 500);
-				    	$('#total_inventory').text(a.total_inventory);
+				    	$('#available_inventory').text(a.available_inventory);
 				    }
 			    },
 			    error: function(a) {
-			    	console.log(a.message);
+			    	console.log(a);
 			    	$('.alerts-holder').prepend('<div class="alert alert-error alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>'+a.statusText+'<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
 			    }
 		  	});	
@@ -1038,8 +1039,8 @@ $(document).on('turbolinks:load',function(){
 			    	if(a.success) {
 				    	$('.product-block').removeClass('hide');
 				    	$('.product-block .product-name').text(a.product.name);
-				    	$('.product-block .product-inventory').text(a.total_inventory);
-				    	$('.product-block .product-incoming').text(a.incoming);
+				    	$('.product-block .product-inventory').text(a.available_inventory);
+				    	$('.product-block .product-incoming').text(a.incoming_inventory);
 				    	$('.product-block .product-orders').text(a.orders);
 				    	console.log(a);
 				    	
@@ -1078,8 +1079,8 @@ $(document).on('turbolinks:load',function(){
 				    				column = column + "<td>"+value.attribute_5+"</td>";
 				    				variant_columns = variant_columns + ", " + a.variant_columns[4].value + ": " + value.attribute_5;
 				    			}
-				    			column = column + "<td class='text-right'>"+value.inventory+"</td>"
-				    			column = column + "<td class='text-right'>"+value.inventory+"</td>"
+				    			column = column + "<td class='text-right'>"+value.available_inventory+"</td>"
+				    			column = column + "<td class='text-right'>"+value.incoming_inventory+"</td>"
 				    			column = column + "<td class='text-right'>"+value.inventory+"</td>"
 				    			column = column + '<td><input type="number" class="form-control" name="variant['+value.id+']" min="0" data-product="'+a.product.name+'" data-description="'+variant_columns+'" value="0"></td>';
 				    			column = column + "</tr>";
@@ -1089,16 +1090,15 @@ $(document).on('turbolinks:load',function(){
 				    		$('.product-to-add').removeClass('hide');
 				    		$('.variants-to-add').addClass('hide');
 				    		$('.product-block .product-quantity').attr('name', "product["+a.product.id+"]");
-				    		$('.product-block .product-quantity').data('product', a.product.name);
+				    		$('.product-block .product-quantity').attr('data-product', a.product.name);
+				    		// $('.product-block .product-quantity').data('product', a.product.name);
 				    		$('.product-block .product-to-add input').select();
 				    	}
 						
-				    } else {
-				    	
-				    }
+				    } 
 			    },
 			    error: function(a) {
-			    	console.log(a.message);
+			    	console.log(a);
 			    	$('.alerts-holder').prepend('<div class="alert alert-error alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>'+a.statusText+'<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
 			    }
 		  	});	
@@ -1109,15 +1109,17 @@ $(document).on('turbolinks:load',function(){
 			});
 		});
 
+		//remove items from delivery cart
 		$('table.table .delivery-cart').on('click', 'td button', function(){
 			if ($('.delivery-cart table.table tbody tr').length === 1) {
-				$('.alerts-holder').prepend('<div class="alert alert-error alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>You cannot remove the only item in the delivery cart!<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+				$('.alerts-holder').prepend('<div class="alert alert-error alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>You cannot remove the only item in the delivery cart<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
 				setTimeout(removeAddedAlerts, 5000);
 			} else {
 				$(this).closest('tr').remove();	
 			}		
 		});
 
+		//add to delivery
 		$('.add-to-delivery').click(function(){
 			$form_inputs = $('.product-block').find('input');
 			// inputs = [];
@@ -1134,11 +1136,11 @@ $(document).on('turbolinks:load',function(){
 						row = "<tr><td>"+value.dataset.product+"</td><td>"+value.dataset.description+"</td><td>" + value.value + "</td><input type='hidden' value='"+value.value+"' name='"+value.name+"' class=''><td><button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button></td></tr>";
 						$('.delivery-cart form table tbody').append(row);
 
-						$('.alerts-holder').prepend('<div class="alert alert-success alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>Item added!<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+						$('.alerts-holder').prepend('<div class="alert alert-success alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>Item added<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
 						setTimeout(removeAddedAlerts, 5000);
 					} else {
 						count = count + 1;
-						$('.alerts-holder').prepend('<div class="alert alert-error alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>Item already in delivery cart!<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+						$('.alerts-holder').prepend('<div class="alert alert-error alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>Item already in delivery cart<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
 						setTimeout(removeAddedAlerts, 5000);
 					}
 					
@@ -1147,7 +1149,7 @@ $(document).on('turbolinks:load',function(){
 			});
 
 			if(count == 0) {
-				$('.alerts-holder').prepend('<div class="alert alert-error alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>All quantities entered are 0!<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+				$('.alerts-holder').prepend('<div class="alert alert-error alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>All quantities entered are 0<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
 			} else {
 				// Make sure this.hash has a value before overriding default behavior
 			    if (this.hash !== "") {

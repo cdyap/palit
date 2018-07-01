@@ -31,20 +31,15 @@
 					<p class="note" style="margin-bottom:0;margin-top:10px;">* Required field</p>			
 				</div>
 				<div class="block">
-					<h4>Pricing:</h4>
+					<h4>Pricing:*</h4>
 					<div class="form-row">
-						<div class="form-group col-sm-6">
-							<label for="currency">Currency:*</label>
-							<select name="currency" class="form-control {{ $errors->has('currency') ? 'has-error' : ''}}" required>
-								<option selected="selected" disabled>None</option>
-								@foreach($currencies as $currency)
-									<option value="{{$currency->value_2}}">{{$currency->value}}</option>
-								@endforeach						
-							</select>
-						</div>
-						<div class="form-group col-sm-6">
-							<label for="price">Price:*</label>
-							<input type="number" name="price" class="form-control {{ $errors->has('price') ? 'has-error' : ''}}"  min="0", value="{{ old('price') }}" required>
+						<div class="form-group col-sm-12">
+							<div class="input-group">
+								<div class="input-group-prepend">
+						        	<div class="input-group-text">{{$company->currency_name}} ({{$company->currency}})</div>
+						        </div>
+								<input type="number" name="price" class="form-control {{ $errors->has('price') ? 'has-error' : ''}}"  min="0", value="{{ old('price') }}" required>
+							</div>
 						</div>
 						<p class="note" style="margin-bottom:0;margin-top:10px;">* Required field</p>
 					</div>

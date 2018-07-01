@@ -20,9 +20,9 @@ class AddMoreColumnsToOrders extends Migration
             $table->string('contact_number');
             $table->string('country');
             $table->string('shipping_address_2')->nullable()->change();
-            $table->string('date_confirmed')->nullable()->change();
-            $table->string('date_ordered')->nullable()->change();
-            $table->string('date_fulfilled')->nullable()->change();
+            $table->dateTime('date_confirmed')->nullable()->change();
+            $table->dateTime('date_ordered')->nullable()->change();
+            $table->dateTime('date_fulfilled')->nullable()->change();
             $table->boolean('is_confirmed')->default(false)->change();
             $table->boolean('is_fulfilled')->default(false)->change();
             $table->boolean('is_active')->default(false)->change();
@@ -43,9 +43,9 @@ class AddMoreColumnsToOrders extends Migration
             $table->dropColumn('contact_number');
             $table->dropColumn('country');
             $table->string('shipping_address_2')->nullable(false)->change();
-            $table->string('date_confirmed')->nullable(false)->change();
-            $table->string('date_ordered')->nullable(false)->change();
-            $table->string('date_fulfilled')->nullable(false)->change();
+            $table->dateTime('date_confirmed')->nullable(false)->change();
+            $table->dateTime('date_ordered')->nullable(false)->change();
+            $table->dateTime('date_fulfilled')->nullable(false)->change();
             $table->boolean('is_confirmed')->default(NULL)->change();
             $table->boolean('is_fulfilled')->default(NULL)->change();
             $table->boolean('is_active')->default(NULL)->change();

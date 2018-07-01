@@ -14,6 +14,48 @@
 	<br>
 	<br>
 	<a href="/inventory/new" class="button z-depth-1">Add delivery</a>
+	@if($products_with_problems->count() > 0)
+		<a href="" class="button z-depth-1 error" data-toggle="modal" data-target="#errors">View errors</a>
+
+		<div class="modal product-modal fade bd-example-modal-lg" tabindex="-1" role="dialog" id="errors" aria-labelledby="Error Modal" aria-hidden="true">
+			<div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title" id="exampleModalLabel">PRODUCTS WITH ERRORS</h5>
+						<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+						</button>
+					</div>
+					<div class="modal-body">
+						<div class="row">
+							<div class="col-md-12">
+								<p class="note">The following products have errors. You may not add deliveries for these products.</p>
+								<table class="table">
+									<thead>
+										<tr>
+											<th>Name</th>
+											<th>Description</th>
+											<th style="min-width:100px;"> </th>
+										</tr>
+									</thead>	
+									<tbody>
+										@foreach($products_with_problems as $product)
+											<tr>
+												<td><a href="/products/{{$product->slug}}">{{$product->name}}</a></td>
+												<td>{{$product->description}}</td>
+												<td style="white-space: nowrap"><a href="/products/{{$product->slug}}#AddVariant" class="button">Add variant</a></td>
+											</tr>
+										@endforeach
+									</tbody>								
+								</table>
+								
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	@endif
 	<br><br><br>
 	<div class="row">
 		<div class="col-lg-10 col-md-12">
@@ -27,8 +69,8 @@
 								<th>Name</th>
 								<th class="text-right" style="max-width:100px;">Inventory</th>
 								<th class="text-right" style="max-width:100px;">Incoming</th>
-								<th class="text-right" style="max-width:100px;">Variants</th>
-								<th class="text-right" style="max-width:100px;">Orders</th>
+								<th class="text-right" style="max-width:100px;">Confirmed</th>
+								<th class="text-right" style="max-width:100px;">Unconfirmed</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -37,16 +79,35 @@
 									<td>{{$product->name}}</td>
 									<td class="text-right">{{$product->available_inventory}}</td>
 									<td class="text-right">{{$product->incoming_inventory}}</td>
-									<td class="text-right">{{$product->variants()->count()}}</td>
-									<td></td>
+									<td class="text-right">{{$paid_orders->where('product_id', $product->id)->sum('quantity')}}</td>
+									<td class="text-right">{{$unpaid_orders->where('product_id', $product->id)->sum('quantity')}}</td>
 								</tr>
+								@if($product->variants->count() > 0)
+									@foreach($product->variants->sortBy('position') as $variant)
+										<tr class="variant_{{$variant->id}}" data-id="{{$variant->id}}" data-inventory="{{$variant->inventory}}" data-price="{{$variant->price}}" data-itemId="{{{ $variant->id }}}"  style="background:#F8F9FA"> 
+											<td>&nbsp;&nbsp;
+												<?php $variant_description = array(); ?>
+
+												@foreach($product_variant_columns->where('name', 'variant_'.$product->id)->sortBy('value_2') as $column)
+													<?php $variant_description[] = $column->value .": ".$variant->{$column->value_2}; ?>
+												@endforeach
+												{{collect($variant_description)->implode("; ")}}
+											</td>
+											<td class="text-right">{{$variant->available_inventory}}</td>
+											<td class="text-right">{{$variant->incoming_inventory}}</td>
+											<td class="text-right">{{$paid_orders->where('variant_id', $variant->id)->sum('quantity')}}</td>
+											<td class="text-right">{{$unpaid_orders->where('variant_id', $variant->id)->sum('quantity')}}</td>
+										</tr>
+									@endforeach
+								@endif
+								
 							@endforeach
 						</tbody>
 					</table>
 				</div>
 			@endif
 			@foreach($products as $product)
-				@if($product->variants()->count() > 0)
+				@if($product->variants->count() > 0)
 					<div class="modal product-modal fade bd-example-modal-lg" tabindex="-1" role="dialog" id="productModal{{$product->slug}}" aria-labelledby="product Modal" aria-hidden="true">
 						<div class="modal-dialog modal-lg modal-dialog-centered" role="document">
 							<div class="modal-content">
@@ -58,7 +119,7 @@
 								</div>
 								<div class="modal-body" style="margin-top:-30px;">
 									<div class="row">
-										<div class="col-xs-12 col-md-3">
+										<div class="col-md-12">
 											<div class="row">
 												<div class="col">
 													<p class="caption">INVENTORY:</p>
@@ -69,18 +130,22 @@
 													<h5>{{$product->incoming_inventory}}</h5>
 												</div>
 												<div class="col">
-													<p class="caption">ORDERS:</p>
-													<h5></h5>
+													<p class="caption">CONFIRMED ORDERS:</p>
+													<h5>{{$paid_orders->where('product_id', $product->id)->pluck('order_items')->count()}}</h5>
+												</div>
+												<div class="col">
+													<p class="caption">UNCONFIRMED ORDERS:</p>
+													<h5>{{$unpaid_orders->where('product_id', $product->id)->pluck('order_items')->count()}}</h5>
 												</div>
 											</div>
 										</div>
-										<div class="col-xs-12 col-md-9">
+										<div class="col-md-12">
 											<div class="product-variants-block">
 												<p class="caption">VARIANTS:</p>
 												<table class="table">
 													<thead>
 														<tr>
-															@foreach($product->variant_columns()->sortBy('value_2') as $column)
+															@foreach($product_variant_columns->where('name', 'variant_'.$product->id)->sortBy('value_2') as $column)
 																<th>{{$column->value}}</th>
 															@endforeach
 															<th class="text-right">Inventory</th>
@@ -91,13 +156,13 @@
 													<tbody data-entityname="variants">
 														@foreach($product->variants->sortBy('position') as $variant)
 															<tr class="variant_{{$variant->id}}" data-id="{{$variant->id}}" data-inventory="{{$variant->inventory}}" data-price="{{$variant->price}}" data-itemId="{{{ $variant->id }}}">
-																@foreach($product->variant_columns()->sortBy('value_2') as $column)
+																@foreach($product_variant_columns->where('name', 'variant_'.$product->id)->sortBy('value_2') as $column)
 																	<td class="{{$column->value_2}}">{{ $variant->{$column->value_2} }}</td>
 																@endforeach
 																
 																<td class="text-right">{{$variant->available_inventory}}</td>
 																<td class="text-right">{{$variant->incoming_inventory}}</td>
-																<td class="text-right">{{$variant->view_price()}}</td>
+																<td class="text-right">{{$product->currency}} {{$variant->view_price}}</td>
 															</tr>
 														@endforeach
 													</tbody>
@@ -150,7 +215,7 @@
 				<div class="table-responsive-sm block">
 					<h4 class="with-underline">Pending deliveries</h4>
 					<p class="note">Click a row to show delivery details</p>
-					<table class="table table-hover inventory-table">
+					<table class="table table-hover inventory-table table-striped">
 						<thead>
 							<tr>
 								<th>Supplier</th>
@@ -166,7 +231,7 @@
 								<tr data-product="{{$delivery->id}}" >
 									<td data-toggle="modal" data-target="#deliveryModal{{$delivery->id}}">{{$delivery->supplier}}</td>
 									<td data-toggle="modal" data-target="#deliveryModal{{$delivery->id}}" class="text-right">{{$delivery->expected_arrival}} ({{$delivery->remaining_days}})</td>
-									<td data-toggle="modal" data-target="#deliveryModal{{$delivery->id}}" class="text-right">{{$delivery->delivered_products->count() + $delivery->delivered_variants->count()}}</td>
+									<td data-toggle="modal" data-target="#deliveryModal{{$delivery->id}}" class="text-right">{{$delivery->items_in_cart}}</td>
 									<td data-toggle="modal" data-target="#deliveryModal{{$delivery->id}}" class="text-right">{{$delivery->delivered_products->sum('quantity') + $delivery->delivered_variants->sum('quantity')}}</td>
 									<td data-toggle="modal" data-target="#deliveryModal{{$delivery->id}}" class="text-right">{{$delivery->delivered_products->sum('delivered_quantity') + $delivery->delivered_variants->sum('delivered_quantity')}}</td>
 									<td>
@@ -240,7 +305,7 @@
 										<div class="row">
 											<div class="col">
 												<p class="caption">DELIVERY CART:</p>
-												<table class="table">
+												<table class="table table-striped">
 													<thead>
 														<tr>
 															<th>Product</th>
@@ -290,7 +355,7 @@
 													</tbody>
 												</table>
 												<br>
-												<a href="/{{Auth::user()->url()}}/inventory/delivery/{{$delivery->slug}}">Receive</a>
+												<a href="/inventory/delivery/{{$delivery->slug}}" class="button">Receive</a>
 											</div>
 										</div>
 									</div>
@@ -306,7 +371,7 @@
 				<div class="table-responsive-sm block">
 					<h4 class="with-underline">Completed deliveries</h4>
 					<p class="note">Click a row to show delivery details</p>
-					<table class="table table-hover inventory-table">
+					<table class="table table-hover inventory-table table-striped">
 						<thead>
 							<tr>
 								<th>Supplier</th>
@@ -321,7 +386,7 @@
 								<tr data-product="{{$delivery->id}}" >
 									<td data-toggle="modal" data-target="#deliveryModal{{$delivery->id}}">{{$delivery->supplier}}</td>
 									<td data-toggle="modal" data-target="#deliveryModal{{$delivery->id}}" class="text-right">{{$delivery->expected_arrival}} ({{$delivery->remaining_days}})</td>
-									<td data-toggle="modal" data-target="#deliveryModal{{$delivery->id}}" class="text-right">{{$delivery->delivered_products->count() + $delivery->delivered_variants->count()}}</td>
+									<td data-toggle="modal" data-target="#deliveryModal{{$delivery->id}}" class="text-right">{{$delivery->items_in_cart}}</td>
 									<td data-toggle="modal" data-target="#deliveryModal{{$delivery->id}}" class="text-right">{{$delivery->delivered_products->sum('delivered_quantity') + $delivery->delivered_variants->sum('delivered_quantity')}}</td>
 									<td>
 										<div class="btn-group dropright float-right">
@@ -392,7 +457,7 @@
 										<div class="row">
 											<div class="col">
 												<p class="caption">DELIVERY CART:</p>
-												<table class="table">
+												<table class="table table-striped">
 													<thead>
 														<tr>
 															<th>Product</th>

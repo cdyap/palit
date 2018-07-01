@@ -41,10 +41,10 @@
                             @endif
                             <div class="card-body">
                                 <h4 class="with-underline">{{$product->name}}</h4>
-                                <h5>{{ $product->hasSameVariantPrices() ? $product->view_price() : $product->variants->sortBy('price')->pluck('view_price')->unique()->implode(', ') }}</h5>
+                                <h5>{{ $product->hasSameVariantPrices() ? $product->view_price() : $product->variants()->sortBy('price')->pluck('view_price')->unique()->implode(', ') }}</h5>
                             </div>
                         </div>
-                        @if($product->variants()->where('is_available', true)->count() > 0)
+                        @if($product->variants->where('is_available', true)->count() > 0)
                             <div class="modal product-modal fade bd-example-modal-lg" tabindex="-1" role="dialog" id="productModal{{$product->slug}}" aria-labelledby="product Modal" aria-hidden="true">
                                 <!-- with variants modal-->
                                 <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
@@ -73,7 +73,7 @@
                                                                 <thead>
                                                                     <tr>
                                                                         <th style="width:25px;"></th>
-                                                                        @foreach($product->variant_columns()->sortBy('value_2') as $column)
+                                                                        @foreach($company->settings->where('name', 'variant_' . $product->id) as $column)
                                                                             <th>{{$column->value}}</th>
                                                                         @endforeach
                                                                         <th class="text-right">Price</th>
@@ -87,10 +87,10 @@
                                                                                     <input class="form-check-input" type="checkbox" name="{{$product->id}}[{{$variant->id}}]" value="true">
                                                                                 </div>
                                                                             </td>
-                                                                            @foreach($product->variant_columns()->sortBy('value_2') as $column)
+                                                                            @foreach($company->settings->where('name', 'variant_' . $product->id) as $column)
                                                                                 <td class="{{$column->value_2}}">{{ $variant->{$column->value_2} }}</td>
                                                                             @endforeach
-                                                                            <td class="text-right">{{$variant->view_price()}}</td>
+                                                                            <td class="text-right">{{$variant->view_price}}</td>
                                                                         </tr>
                                                                     @endforeach
                                                                 </tbody>

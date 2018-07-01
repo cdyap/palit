@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class DeliveredProduct extends Model
 {
     //
+    protected $appends = ['incoming_inventory'];
+
     public function delivery(){
     	return $this->belongsTo('App\Delivery');
     }

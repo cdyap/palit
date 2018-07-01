@@ -110,6 +110,9 @@
         </div>
         <div class="nav-item d-md-none d-lg-none d-xl-none {{ $sidebar == "Orders" ? "active" : ""}}">
             <a href="/orders">
+            @if(Auth::user()->unreadNotifications->count() > 0)
+            <span class="badge badge-light">{{Auth::user()->unreadNotifications->count()}}</span>
+            @endif
             <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
                          viewBox="0 0 200 200" class="mx-auto d-block" style="enable-background:new 0 0 200 200;" xml:space="preserve">
                     <style type="text/css">
@@ -4463,6 +4466,9 @@
                     </div>
                     <div class="item {{ $sidebar == "Orders" ? "active" : ""}}">
                         <a href="/orders">
+                        @if(Auth::user()->unreadNotifications->count() > 0)
+                        <span class="badge badge-light">{{Auth::user()->unreadNotifications->count()}}</span>
+                        @endif
                         <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
                                      viewBox="0 0 200 200" class="mx-auto d-block" style="enable-background:new 0 0 200 200;" xml:space="preserve">
                                 <style type="text/css">
@@ -8780,7 +8786,7 @@
                     <div class="page-header z-depth-1-half">
                         <h1>{{empty($title) ? $sidebar : $title}}</h1>
                     </div>
-                    <div class="container">
+                    <div class="container-fluid">
                     @yield('content')
                     </div>
                 </div>      

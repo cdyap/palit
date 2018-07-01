@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 use App\Product;
 use App\Variant;
+use App\Order;
 use App\Delivery;
 use App\Setting;
 use App\DeliveredVariant;
 use App\DeliveredProduct;
 use Auth;
+use DB;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -27,16 +29,46 @@ class InventoryController extends Controller
         //
         $sidebar = "Inventory";
         $company = Auth::user()->company;
-        $products = Product::with(['variants.delivered_variants', 'delivered_products'])->where('company_id', $company->id)->orderBy('name')->get();
-        $deliveries = Delivery::with(['delivered_variants.variant', 'delivered_variants.product', 'delivered_products.product'])->where('company_id', $company->id)->orderBy('expected_arrival')->get();
+        $products = Product::with(['variants.delivered_variants', 'delivered_products', 'variants.deliveredVariantQuantity', 'variants.deliveredVariantInitial', 'variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'deliveredVariantInitial', 'variants.fulfilledOrders', 'fulfilledOrders'])->where('company_id', $company->id)->orderBy('name')->get();
+        $deliveries = Delivery::with(['delivered_products', 'delivered_variants','deliveredVariantsCount', 'deliveredProductsCount', 'delivered_variants.variant', 'delivered_variants.product', 'delivered_products.product'])->where('company_id', $company->id)->orderBy('expected_arrival')->get();
         $completed_deliveries = $deliveries->where('is_received', true);
         $pending_deliveries = $deliveries->where('is_received', false);
+        
         //get all variant columns of all products where name is in all plucked product IDs prefixed with 'variant_'
         $product_variant_columns = Setting::where('company_id', Auth::user()->company->id)->whereIn('name', preg_filter('/^/', 'variant_', $products->pluck('id')->toArray()))->orderBy('value_2')->get();
 
+        $product_ids_with_variant_columns = $product_variant_columns->unique('name')->pluck('name')->map(function ($item, $key) {
+            return substr($item,8);
+        });
+
+        $products_with_problems = Product::doesntHave('variants')->whereIn('id', $product_ids_with_variant_columns)->orderBy('name')->get();
+
+
         $today = Carbon::now();
 
-        return view('admin.inventory',compact('sidebar', 'products', 'deliveries', 'pending_deliveries', 'completed_deliveries', 'today', 'product_variant_columns'));
+        $unpaid_orders = DB::table('order_items')
+                                ->whereIn('order_id', function($query) use ($company)
+                                {
+                                    $query->select(DB::raw("id"))
+                                          ->from('orders')
+                                          ->whereRaw('date_paid IS NULL')
+                                          ->where('company_id', $company->id)
+                                          ->whereRaw('date_fulfilled IS NULL');
+                                })
+                                ->get();
+
+        $paid_orders = DB::table('order_items')
+                                ->whereIn('order_id', function($query) use ($company)
+                                {
+                                    $query->select(DB::raw("id"))
+                                          ->from('orders')
+                                          ->whereRaw('date_paid IS NOT NULL')
+                                          ->where('company_id', $company->id)
+                                          ->whereRaw('date_fulfilled IS NULL');
+                                })
+                                ->get();
+
+        return view('admin.inventory',compact('sidebar', 'products', 'deliveries', 'pending_deliveries', 'completed_deliveries', 'today', 'product_variant_columns', 'paid_orders', 'unpaid_orders', 'products_with_problems'));
     }
 
     /**
@@ -50,18 +82,30 @@ class InventoryController extends Controller
         $sidebar = "Inventory";
         $company = Auth::user()->company;
         $title = "Add delivery";
-        $products = Product::with('variants')->where('company_id', $company->id)->orderBy('name')->get();
+        $products = Product::where('company_id', $company->id)->orderBy('name')->get();
+
+        //get all variant columns of all products where name is in all plucked product IDs prefixed with 'variant_'
+        $product_variant_columns = Setting::where('company_id', Auth::user()->company->id)->whereIn('name', preg_filter('/^/', 'variant_', $products->pluck('id')->toArray()))->orderBy('value_2')->get();
+
+        $product_ids_with_variant_columns = $product_variant_columns->unique('name')->pluck('name')->map(function ($item, $key) {
+            return substr($item,8);
+        });
+
+        $products_with_problems = Product::doesntHave('variants')->whereIn('id', $product_ids_with_variant_columns)->orderBy('name')->get();
+
+        $products = $products->whereNotIn('id', $products_with_problems->pluck('id'));
+
         return view('admin.inventory_new',compact('sidebar', 'products', 'title', 'delivery'));
     }
 
     public function getProduct(Request $request){
-        $company = Auth::user()->company;
+        // $company = Auth::user()->company;
         try {
             $product = Product::with('variants')->find($request->product_id);
             $has_variants = false;
             $variant_columns = [];
 
-            if($product->variants()->count() > 0) {
+            if($product->variants->count() > 0) {
                 $has_variants = true;
                 $variant_columns = $product->variant_columns()->sortBy('value_2');
             }
@@ -69,7 +113,8 @@ class InventoryController extends Controller
             return response()->json([
                 'success' => 1,
                 'product' => $product,
-                'total_inventory' => $product->total_inventory,
+                'available_inventory' => $product->available_inventory,
+                'incoming_inventory' => $product->incoming_inventory,
                 'has_variants' => $has_variants,
                 'variant_columns' => $variant_columns,
                 'incoming' => $product->incoming

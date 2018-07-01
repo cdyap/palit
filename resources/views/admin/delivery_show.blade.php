@@ -20,7 +20,7 @@
 	@endif
 	</div>
 	<br>
-	<h5><a href="/{{Auth::user()->company->slug}}/inventory">< Inventory</a></h5>
+	<h5><a href="/inventory">< Inventory</a></h5>
 	<div class="row">
 		<div class="col">
 			<p class="caption">DELIVERY DATE:</p>
@@ -46,7 +46,7 @@
 	<div class="row">
 		<div class="col">
 			@if($delivery->delivered_products->where('is_delivered', false)->count() + $delivery->delivered_variants->where('is_delivered', false)->count() > 0)
-				<form action="/{{Auth::user()->url()}}/inventory/delivery/{{$delivery->slug}}/receive" method="POST">
+				<form action="/inventory/delivery/{{$delivery->slug}}/receive" method="POST">
 					<input type="hidden" name="_token" value="{{ csrf_token() }}">
 					<!-- Pending deliveries -->
 					<div class="block">
@@ -106,7 +106,8 @@
 					</div>
 				</form>
 			@endif
-				<!-- Completed deliveries -->
+			<!-- Completed deliveries -->
+			@if($delivery->delivered_products->where('is_delivered', true)->count() + $delivery->delivered_variants->where('is_delivered', true)->count() > 0)
 			<div class="block">
 				<h4>Items completely received:</h4>
 				<table class="table">
@@ -154,6 +155,7 @@
 					</tbody>
 				</table>
 			</div>
+			@endif
 		</div>
 	</div>
 	

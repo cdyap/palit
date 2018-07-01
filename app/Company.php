@@ -36,6 +36,7 @@ class Company extends Model
     public function payment_methods(){
         return $this->hasMany('App\PaymentMethod');
     }
+    
     public function sluggable()
     {
         return [

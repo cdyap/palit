@@ -17,6 +17,9 @@ use Auth;
 use Cart;
 use Log;
 use Hashids;
+use Notification;
+use App\Notifications\OrderCreated;
+use App\Jobs\NotifyUserOfOrder;
 
 class OrdersController extends Controller
 {
@@ -27,14 +30,115 @@ class OrdersController extends Controller
      */
 
     //admin-side orders
-    public function index()
-    {
+    public function confirm($hash, Request $request){
+        try {
+            $order = Order::with('order_items')->where('hash', $hash)->firstOrFail();
+
+            if(!empty($order->date_paid)) {
+                return back()->with(['error' => "Order " . $order->hash . " already paid"]);
+            } else {
+                $order->date_paid = new Carbon;
+                $order->save();
+                return back()->with(['success' => "Confirmed payment for order " . $order->hash]);
+            }
+            // dd($order->order_items);
+        } 
+        catch(Exception $e) {
+            return back()->with(['error' => "Order not found!"]);
+        }
+    }
+
+    public function fulfill($hash, Request $request){
+        try {
+            $order = Order::with('order_items')->where('hash', $hash)->firstOrFail();
+
+            if(!empty($order->date_fulfilled)) {
+                return back()->with(['error' => "Order " . $order->hash . " already fulfilled"]);
+            } else {
+                $order_items_ids = $order->order_items->pluck('product_id');
+
+                //get all related products
+                $products = Product::with(['variants', 'variants.delivered_variants', 'delivered_products', 'variants.deliveredVariantQuantity', 'variants.deliveredVariantInitial', 'variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'deliveredVariantInitial', 'variants.fulfilledOrders', 'fulfilledOrders'])->whereIn('id', $order_items_ids)->orderBy('name')->get();
+
+                //set $failed_order variable = 0
+                $failed_order = [];
+
+                //go through each order item
+                foreach($order->order_items as $item) {
+
+                    //get related product of order item
+                    $product = $products->where('id', $item->product_id)->first();
+
+                    //if product found and item is a variant, process on variant-level
+                    if($product && $item->is_variant) {
+
+                        //retrieve variant object
+                        $variant = $product->variants->where('id', $item->variant_id)->first();
+
+                        //if variant object found and avail inventory >= quantity, update order item object
+                        if($variant && $variant->available_inventory >= $item->quantity) {
+                            $item->is_fulfilled = true;
+                        } else {
+                            $failed_order[] = $variant->product->name . " - " . $variant->description;
+                        }
+                    } 
+                    //else if product found and item is product only, process on product-level
+                    elseif ($product && !($item->is_variant)) {
+                        //if product avail inventory >= item quantity, update order item object
+                        if($product->available_inventory >= $item->quantity) {
+                            $item->is_fulfilled = true;
+                        } else {
+                            $failed_order[] = $variant->product->name;
+                        }
+                    }
+                }
+
+                if(count($failed_order) > 0) {
+                    return back()->with(['error' => "Insufficient inventory for: <br>&nbsp;&nbsp;&nbsp;" . collect($failed_order)->implode('<br>&nbsp;&nbsp;&nbsp;')]);
+                } else {
+                    $order->date_fulfilled = new Carbon;
+                    $order->save();
+                    $order->order_items()->update(['is_fulfilled' => true]);
+                    return back()->with(['success' => "Order " . $order->hash . " fulfilled"]);
+                }
+            }
+            // dd($order->order_items);
+        } 
+        catch(Exception $e) {
+            return back()->with(['error' => "Order not found"]);
+        }
+
+    }
+
+    public function orders_paid(){
+        $sidebar = "Orders";
+        $company = Auth::user()->company;
+        $orders = Order::with('order_items', 'company')->where('company_id', $company->id)->orderBy('date_ordered')->where('date_paid', '<>', null)->where('date_fulfilled', null)->paginate(2);
+
+        $order_type = "Paid";
+
+        return view('admin.orders',compact('sidebar', 'company','orders', 'title', 'order_type'));
+    }
+
+    public function orders_shipped(){
+        $sidebar = "Orders";
+        $company = Auth::user()->company;
+        $orders = Order::with('order_items', 'company')->where('company_id', $company->id)->orderBy('date_ordered')->where('date_paid', '<>', null)->where('date_fulfilled', '<>', null)->paginate(2);
+
+        $order_type = "Shipped";
+
+        return view('admin.orders',compact('sidebar', 'company','orders', 'title', 'order_type'));
+    }
+
+    public function orders_unpaid() {
         //
         $sidebar = "Orders";
         $company = Auth::user()->company;
-        $orders = Order::with('order_items')->where('company_id', $company->id)->orderBy('date_ordered')->get();
+        $orders = Order::with('order_items', 'company')->where('company_id', $company->id)->orderBy('date_ordered')->where('date_paid', null)->where('date_fulfilled', null)->paginate(2);
 
-        return view('admin.orders',compact('sidebar', 'company','orders'));
+        $order_type = "Unpaid";
+
+        return view('admin.orders',compact('sidebar', 'company','orders', 'title', 'order_type'));
     }
 
     /**
@@ -59,7 +163,7 @@ class OrdersController extends Controller
         try {
             $company = Company::where('slug', $slug)->firstOrFail();
             $cart = Cart::instance($company->id)->content();
-            
+
             //validate data
             $validatedData = $request->validate([
                 'email' => 'required|email',
@@ -93,14 +197,9 @@ class OrdersController extends Controller
             $order->payment_method = $request->payment_method;
             $order->date_ordered = new Carbon;
 
-            //if auto-confirm updates is set
-            if($company->auto_confirm_orders) {
-                $order->date_confirmed = new Carbon;
-            }
-
-            //generate 10-string random hash for the order. loop repeats if generated hash already exists in database
+            //generate 6-string random hash for the order. loop repeats if generated hash already exists in database
             do {
-                $random = str_random(10);
+                $random = strtoupper(str_random(6));
                 $order->hash = $random;
             } while ($hashes->contains($random));
 
@@ -108,7 +207,7 @@ class OrdersController extends Controller
             if($cart->where('name', 'Shipping')->count() == 1) {
                 $selected_shipping_mode = $cart->where('name', 'Shipping')->first();
                 $order->shipping_method = $selected_shipping_mode->id->name;
-                $order->shipping_price = $selected_shipping_mode->price;
+                $order->shipping_price = $selected_shipping_mode->price * $selected_shipping_mode->qty;
             }
 
             $company->orders()->save($order);
@@ -120,7 +219,8 @@ class OrdersController extends Controller
                 $order_item->product_name = $product->id->name;
 
                 //if cart item is a variant
-                if(!empty($product->options->variant)) {
+                $variant = $cart->first()->options->variant;
+                if(!empty($variant)) {
                     $order_item->variant_id = $product->options->variant->id;
                     $order_item->variant_description = $product->options->description;
                 }
@@ -133,6 +233,8 @@ class OrdersController extends Controller
 
             Cart::instance($company->id)->destroy();
 
+            Notification::send($company->users, new OrderCreated($order));
+
             return redirect('/'.$slug.'/order/'.$order->hash)->with(['success' => "Order placed!"]);
         } catch (Exception $e) {
 
@@ -143,13 +245,11 @@ class OrdersController extends Controller
         try {
             $company = Company::where('slug', $slug)->firstOrFail();
             $order = Order::where('hash', $order)->with('order_items')->firstOrFail();
-
-
+            
             return view('order_page.view_order',compact('company', 'order'));
         } catch (Exception $e) {
 
         }
-        
     }
 
     /**
@@ -201,13 +301,13 @@ class OrdersController extends Controller
 
     //order page orders
     public function order_page($slug){
-        $company = Company::where('slug', $slug)->with('products', 'collections', 'products.variants', 'products.delivered_products', 'products.delivered_variants')->firstOrFail();
+        $company = Company::where('slug', $slug)->with('products', 'collections', 'products.variants', 'products.delivered_products', 'products.delivered_variants', 'products.variants.product', 'settings')->firstOrFail();
 
         //get cart for this company
         $cart = Cart::instance($company->id)->content();
         $cart_itemcount = Cart::count();
         $cart_total = Cart::subtotal();
-        $product_variant_columns = Setting::where('company_id', $company->id)->whereIn('name', preg_filter('/^/', 'variant_',$cart->pluck('options')->pluck('product')->pluck('id')->toArray()))->orderBy('value_2')->get();
+        $product_variant_columns = $company->settings->whereIn('name', preg_filter('/^/', 'variant_',$cart->pluck('options')->pluck('product')->pluck('id')->toArray()))->sortBy('value_2');
 
         return view('order_page.index',compact('company', 'cart', 'product_variant_columns', 'cart_itemcount', 'cart_total'));
     }
@@ -237,12 +337,13 @@ class OrdersController extends Controller
             //get all variants given array of variant ids passed in $request
             $variant_ids = array_keys(collect($request->except('_token'))->first());
             $variants = $product->variants->whereIn('id', $variant_ids);
-
+            
             $product_variant_columns = Setting::where('company_id', $company->id)->where('name', 'variant_'.$product->id)->get();
 
             //for each included variant, add to cart. use cart for this company
             foreach($variants as $variant) {
                 //generate description of variant
+
                 $i = 0;
                 $description = "";
                 foreach($product_variant_columns as $column){
@@ -256,6 +357,7 @@ class OrdersController extends Controller
                 }
 
                 Cart::instance($company->id)->add($product, "Product", 1, $variant->price, ['variant' => $variant, 'currency' => $variant->product->currency, 'description' => $description]);
+
             }
         }
 
@@ -413,28 +515,50 @@ class OrdersController extends Controller
         return view('order_page.checkout',compact('company', 'cart', 'cart_itemcount', 'cart_total', 'shipping_mode', 'countries', 'payment_methods', 'country_codes'));
     }
 
-    public function toggleAutoConfirm(Request $request){
-        $company = Auth::user()->company;
-        //parse JSON input
-        $input = json_decode($request->getContent(), true);
+    // public function toggleAutoConfirm(Request $request){
+    //     $company = Auth::user()->company;
+    //     //parse JSON input
+    //     $input = json_decode($request->getContent(), true);
 
-        if($input['auto_confirm_orders'] == true) {
-            $company->auto_confirm_orders = true;
-            $company->save();
+    //     if($input['auto_confirm_orders'] == true) {
+    //         $company->auto_confirm_orders = true;
+    //         $company->save();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'enabled'
-            ]);
-        } else {
-            $company->auto_confirm_orders = false;
-            $company->save();
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'enabled'
+    //         ]);
+    //     } else {
+    //         $company->auto_confirm_orders = false;
+    //         $company->save();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'disabled'
-            ]);
-        }
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'disabled'
+    //         ]);
+    //     }
+    // }
+
+    public function check_order_status(){
+        return view('home_check_order_status');
     }
 
+    public function find_order(Request $request){
+        $validatedData = $request->validate([
+            'email' => 'required|email',
+            'hash' => 'required'
+        ]);
+
+        $email = $request->email;
+        $hash = $request->hash;
+
+        $order = Order::where('email', $email)->where('hash', $hash)->first();
+
+        if (!empty($order)) {
+            $company = $order->company;
+            return redirect('/'.$company->slug.'/order/'.$hash);
+        } else {
+            return back()->with(['error' => "Order " . $hash . " not found for " . $email])->withInput($request->input());
+        }
+    }
 }
