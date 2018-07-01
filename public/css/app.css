@@ -677,17 +677,18 @@ tr.active {
   padding-top: 10px;
 }
 
-.admin .sidebar .item:not(.logo) svg {
-  width: 40px;
-  fill: #7F7F7F;
+.admin .sidebar .item:not(.logo) i {
+  font-size: 1.6em;
+  margin-bottom: 5px;
+  color: #7F7F7F;
 }
 
 .admin .sidebar .item:not(.logo):hover {
   cursor: pointer;
 }
 
-.admin .sidebar .item:not(.logo):hover svg {
-  fill: white !important;
+.admin .sidebar .item:not(.logo):hover i {
+  color: white !important;
 }
 
 .admin .sidebar .item:not(.logo):hover a p {
@@ -701,11 +702,12 @@ tr.active {
 
 .admin .sidebar .active p {
   font-weight: 700;
+  letter-spacing: 0.7px;
   color: white;
 }
 
-.admin .sidebar .active svg {
-  fill: white !important;
+.admin .sidebar .active i {
+  color: white !important;
 }
 
 .admin .navbar .nav-item:not(.logo):not(.dropdown) {
@@ -714,9 +716,10 @@ tr.active {
   padding-top: 5px;
 }
 
-.admin .navbar .nav-item:not(.logo):not(.dropdown) svg {
-  width: 30px;
-  fill: #7F7F7F;
+.admin .navbar .nav-item:not(.logo):not(.dropdown) i {
+  font-size: 1.5em;
+  margin-top: 2px;
+  color: #7F7F7F;
 }
 
 .admin .navbar .nav-item:not(.logo):not(.dropdown) a p {
@@ -727,12 +730,12 @@ tr.active {
   cursor: pointer;
 }
 
-.admin .navbar .nav-item:not(.logo):not(.dropdown):hover svg {
-  fill: white !important;
+.admin .navbar .nav-item:not(.logo):not(.dropdown):hover i {
+  color: white !important;
 }
 
-.admin .navbar .active svg {
-  fill: white !important;
+.admin .navbar .active i {
+  color: white !important;
 }
 
 .admin .content {
