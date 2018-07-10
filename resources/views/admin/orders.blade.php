@@ -38,7 +38,7 @@
 						<td>{{$order->hash}}</td>
 						<td>{{$order->first_name . " " . $order->last_name}}</td>
 						<td>{{$order->shipping_address_1 . $order->shipping_address_2}}</td>
-						<td class="text-right">{{$order->total()}}</td>
+						<td class="text-right">{{$order->total}}</td>
 						<td class="text-right">{{$order->date_ordered}}</td>
 					</tr>
 				@endforeach
@@ -103,12 +103,12 @@
 									<br><br>								
 									<form action="/orders/{{$order->hash}}/fulfill" method="POST">
 										<input type="hidden" name="_token" value="{{ csrf_token() }}">
-										<button type="submit">Fulfill</button>
+										<button type="submit">Ship out</button>
 									</form>
 								@else
 									<p class="caption">Payment received:</p>
 									<h5>{{$order->date_paid}}</h5>
-									<p class="caption">Fulfilled on:</p>
+									<p class="caption">Shipped out on:</p>
 									<h5>{{$order->date_fulfilled}}</h5>
 								@endif
 								<br>
@@ -120,8 +120,9 @@
 										<table class="table shipping">
 						                    <thead>
 						                        <th>Item</th>
-						                        <th class="text-right" style="width:100px;">Quantity</th>
-						                        <th class="text-right">Total</th>
+						                        <th class="text-right" style="width:50px;">Quantity</th>
+						                        <th class="text-right">Price</th>
+						                        <th class="text-right" >Total</th>
 						                    </thead>
 						                    <tbody>
 						                        @foreach($order->order_items as $item)
@@ -129,15 +130,18 @@
 						                                <td class="align-middle">{{$item->product_name}}<br><span class="text-grey">{{$item->variant_description}}</span></td>
 						                                <td class="text-right align-middle">{{$item->quantity}}</td>
 						                                <td class="text-right align-middle">{{$order->company->currency . " " . number_format($item->price, 2, '.', ',')}}</td>
+						                                <td class="text-right align-middle">{{$order->company->currency . " " . number_format($item->total_price, 2, '.', ',')}}</td>
 						                            </tr>
 						                        @endforeach
 						                        <tr class="">
 						                            <td colspan="2"><span class="note">SHIPPING:<br></span>{{$order->shipping_method}}</td>
+						                            <td></td>
 						                            <td class="text-right align-middle">{{$order->view_shipping_price()}}</td>
 						                        </tr>
 						                        <tr class="text-bold">
 						                            <td colspan="2">Total amount due:</td>
-						                            <td class="text-right align-middle">{{$order->total()}}</td>
+						                            <td></td>
+						                            <td class="text-right align-middle">{{$order->total}}</td>
 						                        </tr>
 						                    </tbody>
 						                </table>

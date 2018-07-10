@@ -8,7 +8,7 @@ class OrderItem extends Model
 {
     //
     public $timestamps = false;
-    protected $appends = ['is_variant'];
+    protected $appends = ['is_variant', 'total_price'];
 
     public function order(){
     	return $this->belongsTo('App\Order');
@@ -28,5 +28,9 @@ class OrderItem extends Model
     	} else {
     		return true;
     	}
+    }
+
+    public function getTotalPriceAttribute(){
+        return $this->quantity * $this->price;
     }
 }

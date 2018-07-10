@@ -15,6 +15,9 @@ Auth::routes();
 Route::get('/', 'HomeController@index');
 Route::get('/CheckOrderStatus', 'OrdersController@check_order_status');
 Route::post('/FindOrder', 'OrdersController@find_order');
+Route::get('/FindOrder', function () {
+    return redirect('/CheckOrderStatus');
+});
 
 Route::group(['middleware' => 'auth', 'web'], function () {
     Route::get('/dashboard', 'AdminController@index');
@@ -106,4 +109,4 @@ Route::patch('/removeFromCart/{slug}/{rowId}', 'OrdersController@removeFromCart'
 Route::patch('/changeQuantity/{slug}/{rowId}', 'OrdersController@changeQuantity');
 
 //view order page
-Route::get('/{company_slug}/order/{order}', 'OrdersController@view_order');
+Route::post('/order/{order}', 'OrdersController@view_order');

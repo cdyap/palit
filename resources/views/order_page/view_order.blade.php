@@ -56,6 +56,7 @@
                     <thead>
                         <th>Item</th>
                         <th class="text-right" style="width:100px;">Quantity</th>
+                        <th class="text-right">Price</th>
                         <th class="text-right">Total</th>
                     </thead>
                     <tbody>
@@ -64,15 +65,16 @@
                                 <td class="align-middle">{{$item->product_name}}<br><span class="text-grey">{{$item->variant_description}}</span></td>
                                 <td class="text-right align-middle">{{$item->quantity}}</td>
                                 <td class="text-right align-middle">{{$order->company->currency . " " . number_format($item->price, 2, '.', ',')}}</td>
+                                <td class="text-right align-middle">{{$order->company->currency . " " . number_format($item->total_price, 2, '.', ',')}}</td>
                             </tr>
                         @endforeach
                         <tr class="">
-                            <td colspan="2"><span class="note">SHIPPING:<br></span>{{$order->shipping_method}}</td>
+                            <td colspan="3"><span class="note">SHIPPING:<br></span>{{$order->shipping_method}}</td>
                             <td class="text-right align-middle">{{$order->view_shipping_price()}}</td>
                         </tr>
                         <tr class="text-bold">
-                            <td colspan="2">Total amount due:</td>
-                            <td class="text-right align-middle">{{$order->total()}}</td>
+                            <td colspan="3">Total amount due:</td>
+                            <td class="text-right align-middle">{{$order->total}}</td>
                         </tr>
                     </tbody>
                 </table>

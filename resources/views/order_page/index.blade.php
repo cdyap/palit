@@ -90,7 +90,7 @@
                                                                             @foreach($company->settings->where('name', 'variant_' . $product->id) as $column)
                                                                                 <td class="{{$column->value_2}}">{{ $variant->{$column->value_2} }}</td>
                                                                             @endforeach
-                                                                            <td class="text-right">{{$variant->view_price}}</td>
+                                                                            <td class="text-right">{{$product->currency}} {{$variant->view_price}}</td>
                                                                         </tr>
                                                                     @endforeach
                                                                 </tbody>
@@ -204,7 +204,7 @@
                                                 <td></td>
                                                 <td class="text-right text-bold">Total:</td>
                                                 <td class="text-right text-bold" id="cart_itemcount">{{$cart_itemcount}}</td>
-                                                <td class="text-right text-bold" id="cart_total">{{$cart_total}}</td>
+                                                <td class="text-right text-bold" id="cart_total">{{$company->currency}} {{$cart_total}}</td>
                                                 <td></td>
                                             </tr>
                                         </tbody>

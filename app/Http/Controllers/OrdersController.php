@@ -113,7 +113,7 @@ class OrdersController extends Controller
     public function orders_paid(){
         $sidebar = "Orders";
         $company = Auth::user()->company;
-        $orders = Order::with('order_items', 'company')->where('company_id', $company->id)->orderBy('date_ordered')->where('date_paid', '<>', null)->where('date_fulfilled', null)->paginate(2);
+        $orders = Order::with('order_items', 'company', 'ordersQuantity')->where('company_id', $company->id)->orderBy('date_ordered')->where('date_paid', '<>', null)->where('date_fulfilled', null)->paginate(5);
 
         $order_type = "Paid";
 
@@ -123,7 +123,7 @@ class OrdersController extends Controller
     public function orders_shipped(){
         $sidebar = "Orders";
         $company = Auth::user()->company;
-        $orders = Order::with('order_items', 'company')->where('company_id', $company->id)->orderBy('date_ordered')->where('date_paid', '<>', null)->where('date_fulfilled', '<>', null)->paginate(2);
+        $orders = Order::with('order_items', 'company', 'ordersQuantity')->where('company_id', $company->id)->orderBy('date_ordered')->where('date_paid', '<>', null)->where('date_fulfilled', '<>', null)->paginate(5);
 
         $order_type = "Shipped";
 
@@ -134,7 +134,7 @@ class OrdersController extends Controller
         //
         $sidebar = "Orders";
         $company = Auth::user()->company;
-        $orders = Order::with('order_items', 'company')->where('company_id', $company->id)->orderBy('date_ordered')->where('date_paid', null)->where('date_fulfilled', null)->paginate(2);
+        $orders = Order::with('order_items', 'company', 'ordersQuantity')->where('company_id', $company->id)->orderBy('date_ordered')->where('date_paid', null)->where('date_fulfilled', null)->paginate(5);
 
         $order_type = "Unpaid";
 
@@ -163,7 +163,6 @@ class OrdersController extends Controller
         try {
             $company = Company::where('slug', $slug)->firstOrFail();
             $cart = Cart::instance($company->id)->content();
-
             //validate data
             $validatedData = $request->validate([
                 'email' => 'required|email',
@@ -219,7 +218,7 @@ class OrdersController extends Controller
                 $order_item->product_name = $product->id->name;
 
                 //if cart item is a variant
-                $variant = $cart->first()->options->variant;
+                $variant = $product->options->variant;
                 if(!empty($variant)) {
                     $order_item->variant_id = $product->options->variant->id;
                     $order_item->variant_description = $product->options->description;
@@ -241,10 +240,11 @@ class OrdersController extends Controller
         }        
     }
 
-    public function view_order($slug, $order){
+    public function view_order($order){
         try {
-            $company = Company::where('slug', $slug)->firstOrFail();
             $order = Order::where('hash', $order)->with('order_items')->firstOrFail();
+            $company = new Company;
+            $company->name = "View order";
             
             return view('order_page.view_order',compact('company', 'order'));
         } catch (Exception $e) {
@@ -401,7 +401,8 @@ class OrdersController extends Controller
                 'success' => true,
                 'item_price' => $item->options->currency . " " . number_format($item->price*$item->qty, 2, '.', ','),
                 'cart_itemcount' => Cart::count(),
-                'cart_total' => Cart::subtotal()
+                'cart_total' => Cart::subtotal(),
+                'currency' => $company->currency
             ]);
         } catch (Exception $e) {
             return response()->json([
@@ -428,26 +429,52 @@ class OrdersController extends Controller
 
         $cart_itemcount = Cart::count();
 
+        $cart_cost_without_shipping = Cart::subtotal(2,'.','');
 
-        //compute for potential shipping costs per mode
-        $shippings = $company->shippings;
-        foreach($shippings as $mode) {
-            $shipping_qty = 0;
-            $cart_cost = 0.00;
-            foreach($cart->where('name', 'Product') as $item) {
-                $shipping_qty = $shipping_qty + ($item->id->shipping_factor * $item->qty);
-                $cart_cost = $cart_cost + ($item->qty * $item->price);
+        //cart cost without existing shipping
+        if($cart->where('name', 'Shipping')->count() > 0) {
+            $cart_cost_without_shipping = Cart::subtotal(2,'.','') - $cart->where('name', 'Shipping')->first()->price;
+        } 
+
+        //if any of cart items requires shipping, compute for shipping
+        if (in_array(true, $cart->where('name', 'Product')->pluck('id')->pluck('is_shipped')->toArray())) {
+            //compute for potential shipping costs per shipping mode
+            $shippings = $company->shippings->where('is_available', true);
+            foreach($shippings as $mode) {
+                $shipping_qty = 0;
+
+                //go through each product and determine shipping cost ONLY if shipping is required
+                foreach($cart->where('name', 'Product') as $item) {
+                    if($item->id->is_shipped) {
+                        $shipping_qty = $shipping_qty + ($item->id->shipping_factor * $item->qty);
+                    }
+                }
+                $mode->quantity = ceil($shipping_qty);
+                $mode->total_cost = $mode->currency . " " . number_format($mode->quantity * $mode->price, 2, '.', ',');
+                $mode->cart_cost = $mode->currency . " " . number_format($mode->quantity * $mode->price + $cart_cost_without_shipping, 2, '.', ',');
             }
-            $mode->total_cost = $mode->currency . " " . number_format(ceil($shipping_qty) * $mode->price, 2, '.', ',');
-            $mode->view_cost = ceil($shipping_qty) * $mode->price;
-            $mode->quantity = ceil($shipping_qty);
-            $mode->cart_cost = $mode->currency . " " . number_format((ceil($shipping_qty) * $mode->price) + $cart_cost, 2, '.', ',');
+        } else {
+            $shipping = new Shipping;
+            $shipping->name = "None";
+            $shipping->id = "None";
+            $shipping->description = "Items in cart don't require shipping";
+            $shipping->company_id = $company->id;
+            $shipping->is_available = true;
+            $shipping->currency = $company->currency;
+            $shipping->price = 0;
+            $shipping->total_cost = $company->currency . " " . number_format(0, 2, '.', ',');
+            $shipping->cart_cost = $company->currency . " " . number_format($cart_cost_without_shipping, 2, '.', ',') ;
+            $shipping->quantity = 1;
+
+            $shippings[0] = $shipping;
+            $shippings = collect($shippings);
         }
 
         //set selected_shipping_mode variable to null. Set if present in cart
-        $selected_shipping_mode = null;
         if($cart->where('name', 'Shipping')->count() == 1) {
             $selected_shipping_mode = $cart->where('name', 'Shipping')->first();
+        } else {
+            $selected_shipping_mode = null;
         }
         
         return view('order_page.shipping',compact('company', 'cart', 'cart_itemcount', 'cart_total','shippings', 'selected_shipping_mode'));
@@ -466,31 +493,52 @@ class OrdersController extends Controller
         $cart = Cart::instance($company->id)->content();
         $cart_total = Cart::subtotal();
 
+        //if None is selected as shipping, add to cart
+        if($request->shipping == 0) {
+            $shipping = new Shipping;
+            $shipping->name = "None";
+            $shipping->id = "0";
+            $shipping->description = "Items in cart don't require shipping";
+            $shipping->company_id = $company->id;
+            $shipping->is_available = true;
+            $shipping->currency = $company->currency;
+            $shipping->price = 0;
+            $shipping->total_cost = $company->currency . " " . number_format(0, 2, '.', ',');
+            $shipping->view_cost = 0;
+            $shipping->cart_cost = $shipping->total_cost;
+            $shipping->quantity = 1;
+
+            Cart::add($shipping, "Shipping", 1, 0);
+        }
         //if has request post data and if cart doesn't have any shipping item yet
-        if($request->shipping) {
+        elseif($request->shipping) {
+
             //remove any existing shipping items from cart
             if($cart->where('name', 'Shipping')->count() > 0) {
                 $existing_shipping_ids = $cart->where('name', 'Shipping')->pluck('rowId')->toArray();
                 foreach($existing_shipping_ids as $rowId){
                     Cart::remove($rowId);
                 }
-                
             }
+
 
             //compute for shipping using selected shipping mode
             $shipping_mode = Shipping::where('company_id', $company->id)->where('id', $request->shipping)->firstOrFail();
             $shipping_qty = 0;
 
-            //compute shipping for CartItems that are products only
+            //go through each product and determine shipping cost ONLY if shipping is required
             foreach($cart->where('name', 'Product') as $item) {
-                $shipping_qty = $shipping_qty + ($item->id->shipping_factor * $item->qty);
+                if($item->id->is_shipped) {
+                    $shipping_qty = $shipping_qty + ($item->id->shipping_factor * $item->qty);
+                }
             }
+
             $shipping_mode->total_cost = $shipping_mode->currency . " " . number_format(ceil($shipping_qty) * $shipping_mode->price, 2, '.', ',');
             $shipping_mode->view_cost = ceil($shipping_qty) * $shipping_mode->price;
             $shipping_mode->quantity = ceil($shipping_qty);
             $shipping_mode->cart_cost = $shipping_mode->currency . " " . number_format((ceil($shipping_qty) * $shipping_mode->price) + floatval(str_replace(",","",$cart_total)), 2, '.', ',');     
 
-            Cart::add($shipping_mode, "Shipping", $shipping_mode->quantity, $shipping_mode->price);
+            Cart::add($shipping_mode, "Shipping", $shipping_mode->quantity, $shipping_mode->price, ['currency' => $company->currency]);
         }
 
         $countries = AppSettings::where('name', 'country')->get();
@@ -552,11 +600,16 @@ class OrdersController extends Controller
         $email = $request->email;
         $hash = $request->hash;
 
-        $order = Order::where('email', $email)->where('hash', $hash)->first();
+        $order = Order::with('order_items', 'company', 'ordersQuantity')->where('email', $email)->where('hash', $hash)->first();
 
         if (!empty($order)) {
-            $company = $order->company;
-            return redirect('/'.$company->slug.'/order/'.$hash);
+            // $order = Order::where('hash', $order)->with('order_items')->firstOrFail();
+            $company = new Company;
+            $company->name = "View order";
+            
+            return view('order_page.view_order',compact('company', 'order'));
+
+            // return redirect('/order/'.$hash);
         } else {
             return back()->with(['error' => "Order " . $hash . " not found for " . $email])->withInput($request->input());
         }
