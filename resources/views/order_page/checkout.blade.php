@@ -30,7 +30,7 @@
 		</div>
 		<div class="row">
 			<div class="col-xs-12 col-md-6">
-				<form action="/{{$company->slug}}/order/store" method="POST" id="checkout_form">
+				<form action="/{{$company->slug}}/save-order" method="POST" id="checkout_form">
 					<input type="hidden" name="_token" value="{{ csrf_token() }}">
 					<div class="row">
 						<h4 class="with-underline text-bold">CUSTOMER INFORMATION</h4>

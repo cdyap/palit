@@ -221,7 +221,7 @@ class ProductsController extends Controller
 
 	public function show($product_slug){
 		try {
-			$product = Product::where('slug', $product_slug)->with('variants', 'variants.product','variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'variants.deliveredVariantQuantity', 'fulfilledOrders', 'variants.fulfilledOrders')->where('company_id', Auth::user()->company->id)->firstOrFail();
+			$product = Product::where('slug', $product_slug)->with('variants.delivered_variants', 'delivered_products', 'variants.deliveredVariantQuantity', 'variants.deliveredVariantInitial', 'variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'deliveredVariantInitial', 'variants.fulfilledOrders', 'fulfilledOrders')->where('company_id', Auth::user()->company->id)->firstOrFail();
 			$title = $product->name;
 			$sidebar = "Products";
 

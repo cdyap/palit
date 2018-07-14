@@ -234,6 +234,11 @@ div.empty-state {
 		cursor: pointer;
 	}
 }
+
+.cursor-pointer:hover {
+	cursor: pointer;
+}
+
 .dz-image-preview, .dz-image {
 	display: block!important;
 	margin-left: auto!important;
@@ -882,6 +887,13 @@ body.order_page {
 				button.add-to-cart:disabled:hover{
 					cursor: not-allowed;
 				}
+
+				table.with-checkbox tbody {
+					tr:hover, .form-check-input:hover {
+						cursor: pointer;
+					}
+				}
+				
 			}
 		}
 

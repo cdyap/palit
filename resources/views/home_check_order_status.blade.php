@@ -24,7 +24,7 @@
 		</div>
 		<div class="col d-flex justify-content-center align-items-center">
 			<div class="form">
-				<form action="/FindOrder" method="POST" class="">
+				<form action="/view-order" method="POST" class="">
 					<input type="hidden" name="_token" value="{{ csrf_token() }}">
 					<h1>How's your order?</h1>
 					<br>

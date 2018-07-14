@@ -45,7 +45,7 @@
 			</tbody>
 		</table>
 		<nav aria-label="Orders navigation" class="justify-content-center">
-		{{ $orders->links("pagination::bootstrap-4") }}
+			{{ $orders->links("pagination::bootstrap-4") }}
 		</nav>
 		
 		@foreach($orders as $order) 
@@ -58,7 +58,7 @@
 							<span aria-hidden="true">&times;</span>
 							</button>
 						</div>
-						<div class="modal-body" style="margin-top:-50px;">
+						<div class="modal-body">
 							<div class="card-partition">
 								<div class="row">
 									<div class="col ">

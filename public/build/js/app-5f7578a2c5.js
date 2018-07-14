@@ -987,9 +987,18 @@ $('body.order_page').ready(function(){
 		removeFromCart($(this).data('company'), $(this).data('rowid'));
 	});
 
+	$('body.order_page .product-modal table.table').on('click', 'tbody tr', function(event){
+		
+		if (event.target.type !== 'checkbox') {
+			$(':checkbox', this).trigger('click');
+		}
+	});
+
 	$('body.order_page .cart-modal table.table').on('change', '.item-quantity', function(){
 		changeQuantity($(this).data('company'), $(this).data('rowid'), $(this).val());
 	});
+
+	$('div.catalogue table tbody tr').addClass('cursor-pointer');
 
 	$('.item-quantity').click(function(){
 		$(this).select();

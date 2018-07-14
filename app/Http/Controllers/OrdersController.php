@@ -76,25 +76,27 @@ class OrdersController extends Controller
                         $variant = $product->variants->where('id', $item->variant_id)->first();
 
                         //if variant object found and avail inventory >= quantity, update order item object
+
                         if($variant && $variant->available_inventory >= $item->quantity) {
                             $item->is_fulfilled = true;
                         } else {
-                            $failed_order[] = $variant->product->name . " - " . $variant->description;
+                            $failed_order[] = $variant->product->name . " - " . $item->variant_description;
                         }
                     } 
+
                     //else if product found and item is product only, process on product-level
                     elseif ($product && !($item->is_variant)) {
                         //if product avail inventory >= item quantity, update order item object
                         if($product->available_inventory >= $item->quantity) {
                             $item->is_fulfilled = true;
                         } else {
-                            $failed_order[] = $variant->product->name;
+                            $failed_order[] = $product->name;
                         }
                     }
                 }
 
                 if(count($failed_order) > 0) {
-                    return back()->with(['error' => "Insufficient inventory for: <br>&nbsp;&nbsp;&nbsp;" . collect($failed_order)->implode('<br>&nbsp;&nbsp;&nbsp;')]);
+                    return back()->with(['error' => "Insufficient inventory for: <br>&nbsp;&nbsp;•&nbsp;" . collect($failed_order)->implode('<br>&nbsp;&nbsp;•&nbsp;')]);
                 } else {
                     $order->date_fulfilled = new Carbon;
                     $order->save();
@@ -134,7 +136,7 @@ class OrdersController extends Controller
         //
         $sidebar = "Orders";
         $company = Auth::user()->company;
-        $orders = Order::with('order_items', 'company', 'ordersQuantity')->where('company_id', $company->id)->orderBy('date_ordered')->where('date_paid', null)->where('date_fulfilled', null)->paginate(5);
+        $orders = Order::with('order_items', 'company', 'ordersQuantity')->where('company_id', $company->id)->orderBy('date_ordered')->where('date_paid', null)->where('date_fulfilled', null)->paginate(2);
 
         $order_type = "Unpaid";
 
@@ -234,7 +236,8 @@ class OrdersController extends Controller
 
             Notification::send($company->users, new OrderCreated($order));
 
-            return redirect('/'.$slug.'/order/'.$order->hash)->with(['success' => "Order placed!"]);
+            // return redirect('/view-order')->with(['success' => "Order placed!", 'order' => $order]);
+            return view('order_page.view_order',compact('company', 'order'));
         } catch (Exception $e) {
 
         }        
@@ -324,7 +327,7 @@ class OrdersController extends Controller
     }
 
     public function addToCart($slug, Request $request){
-        $company = Company::where('slug', $slug)->firstOrFail();
+        $company = Company::with('settings')->where('slug', $slug)->firstOrFail();
         
         //$request contains _token and product id. remove _token
         $product = Product::with('variants')->findOrFail(collect($request->except('_token'))->keys()[0]);
@@ -338,7 +341,7 @@ class OrdersController extends Controller
             $variant_ids = array_keys(collect($request->except('_token'))->first());
             $variants = $product->variants->whereIn('id', $variant_ids);
             
-            $product_variant_columns = Setting::where('company_id', $company->id)->where('name', 'variant_'.$product->id)->get();
+            $product_variant_columns = $company->settings->where('name', 'variant_'.$product->id);
 
             //for each included variant, add to cart. use cart for this company
             foreach($variants as $variant) {
@@ -429,15 +432,57 @@ class OrdersController extends Controller
 
         $cart_itemcount = Cart::count();
 
+        //remove existing shipping selected
+        foreach($cart->where('name', 'Shipping') as $shipping) {
+            Cart::remove($shipping->rowId);
+        }
+
         $cart_cost_without_shipping = Cart::subtotal(2,'.','');
 
-        //cart cost without existing shipping
-        if($cart->where('name', 'Shipping')->count() > 0) {
-            $cart_cost_without_shipping = Cart::subtotal(2,'.','') - $cart->where('name', 'Shipping')->first()->price;
-        } 
+        //RETRIEVE CART ITEMS WITH QTYs > AVAILABLE INVENTORY
+        //get product and variant IDs and map to rowId
+        $products_of_cart = $cart->where('name', 'Product')->where('options.variant.id', null)->pluck('id.id', 'rowId');
+        $variants_of_cart = $cart->where('name', 'Product')->where('options.variant.id', '<>', null)->pluck('options.variant.id', 'rowId');
+    
+        $invalid_cart_items = array();
 
+        //retrieve variant cart items with invalid QTYs
+        if ($variants_of_cart->count() > 0) {
+            $variants = Variant::with(['delivered_variants', 'deliveredVariantQuantity', 'deliveredVariantInitial', 'fulfilledOrders'])->where('company_id', $company->id)->whereIn('id', $variants_of_cart)->get();
+
+            $existing_variant_quantity = $variants->pluck('available_inventory', 'id');
+
+            //filter out cart items with ordered quantities greater than available inventory
+            $invalid_cart_items_variants = $variants_of_cart->filter(function ($item, $key) use ($cart, $existing_variant_quantity) {
+                return $cart[$key]->qty > $existing_variant_quantity[$item];
+            });
+
+            if($invalid_cart_items_variants->count() > 0)
+                foreach($invalid_cart_items_variants->keys() as $key) {
+                    $invalid_cart_items[] = $key;
+                }
+
+        }
+
+        //retrieve product cart items with invalid QTYs
+        $products = Product::with(['delivered_products', 'variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'deliveredVariantInitial', 'fulfilledOrders'])->where('company_id', $company->id)->whereIn('id', $products_of_cart)->orderBy('name')->get();
+        
+        $existing_product_quantity = $products->pluck('available_inventory', 'id');
+
+        //filter out cart items with ordered quantities greater than available inventory
+        $invalid_cart_items_products = $products_of_cart->filter(function ($item, $key) use ($cart, $existing_product_quantity) {
+            return $cart[$key]->qty > $existing_product_quantity[$item];
+        });
+
+        if($invalid_cart_items_products->count() > 0) {
+            foreach($invalid_cart_items_products->keys() as $key) {
+                $invalid_cart_items[] = $key;
+            }
+        }
+
+        //COMPUTE FOR SHIPPING
         //if any of cart items requires shipping, compute for shipping
-        if (in_array(true, $cart->where('name', 'Product')->pluck('id')->pluck('is_shipped')->toArray())) {
+        if (in_array(true, $cart->where('name', 'Product')->pluck('id.is_shipped')->toArray())) {
             //compute for potential shipping costs per shipping mode
             $shippings = $company->shippings->where('is_available', true);
             foreach($shippings as $mode) {
@@ -476,11 +521,16 @@ class OrdersController extends Controller
         } else {
             $selected_shipping_mode = null;
         }
-        
-        return view('order_page.shipping',compact('company', 'cart', 'cart_itemcount', 'cart_total','shippings', 'selected_shipping_mode'));
+    
+        return view('order_page.shipping',compact('company', 'cart', 'cart_itemcount', 'cart_total','shippings', 'selected_shipping_mode' ,'invalid_cart_items'));
     }
 
     public function checkout($slug, Request $request){
+
+        if ( !request()->is('/'.$slug.'/checkout') && url()->previous() !=  url('/'.$slug.'/shipping') ) {
+            return redirect()->to('/'.$slug.'/shipping'); //Send them somewhere else
+        }
+
         $company = Company::with('shippings')->where('slug', $slug)->firstOrFail();
         $payment_methods = $company->payment_methods;
         
@@ -613,5 +663,13 @@ class OrdersController extends Controller
         } else {
             return back()->with(['error' => "Order " . $hash . " not found for " . $email])->withInput($request->input());
         }
+    }
+
+    public function redirect_to_home($company, Request $request){
+        return redirect('/'.$company);
+    }
+
+    public function redirect_to_shipping($company, Request $request){
+        return redirect('/'.$company.'/shipping');
     }
 }

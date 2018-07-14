@@ -1,7 +1,7 @@
 @extends('layouts.order_page')
 
 @section('content')
-    <div class="container">
+    <div class="container catalogue">
         <!-- collections -->
         @if($company->collections->where('is_available', true)->count() > 0)
             <div class="row">
@@ -69,7 +69,7 @@
                                                         <input type="hidden" name="_token" value="{{ csrf_token() }}">
                                                         <div class="product-variants-block">
                                                             <p class="caption" style="color:black">SELECT VARIANTS TO ADD TO YOUR CART:</p>
-                                                            <table class="table" style="margin-bottom:40px;">
+                                                            <table class="table with-checkbox" style="margin-bottom:40px;">
                                                                 <thead>
                                                                     <tr>
                                                                         <th style="width:25px;"></th>

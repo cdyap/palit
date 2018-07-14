@@ -13,11 +13,6 @@
 
 Auth::routes();
 Route::get('/', 'HomeController@index');
-Route::get('/CheckOrderStatus', 'OrdersController@check_order_status');
-Route::post('/FindOrder', 'OrdersController@find_order');
-Route::get('/FindOrder', function () {
-    return redirect('/CheckOrderStatus');
-});
 
 Route::group(['middleware' => 'auth', 'web'], function () {
     Route::get('/dashboard', 'AdminController@index');
@@ -100,13 +95,18 @@ Route::post('/{company_slug}/shipping', 'OrdersController@shipping');
 Route::get('/{company_slug}/shipping', 'OrdersController@shipping');
 
 Route::post('/{company_slug}/checkout', 'OrdersController@checkout');
-Route::get('/{company_slug}/checkout', 'OrdersController@checkout');
+Route::get('/{company_slug}/checkout', 'OrdersController@redirect_to_shipping');
 
-Route::post('/{company_slug}/order/store', 'OrdersController@store');
+Route::post('/{company_slug}/save-order', 'OrdersController@store');
+Route::get('/{company_slug}/save-order', 'OrdersController@redirect_to_home');
+
+Route::get('/check-order-status', 'OrdersController@check_order_status');
+Route::post('/view-order', 'OrdersController@find_order');
+Route::get('/view-order', function () {
+    return redirect('/check-order-status');
+});
 
 //helper functions
 Route::patch('/removeFromCart/{slug}/{rowId}', 'OrdersController@removeFromCart');
 Route::patch('/changeQuantity/{slug}/{rowId}', 'OrdersController@changeQuantity');
 
-//view order page
-Route::post('/order/{order}', 'OrdersController@view_order');

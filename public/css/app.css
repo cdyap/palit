@@ -223,6 +223,10 @@ div.empty-state svg {
   cursor: pointer;
 }
 
+.cursor-pointer:hover {
+  cursor: pointer;
+}
+
 .dz-image-preview, .dz-image {
   display: block !important;
   margin-left: auto !important;
@@ -880,6 +884,10 @@ body.order_page div.body .product-modal .modal-content button.add-to-cart:hover 
 
 body.order_page div.body .product-modal .modal-content button.add-to-cart:disabled:hover {
   cursor: not-allowed;
+}
+
+body.order_page div.body .product-modal .modal-content table.with-checkbox tbody tr:hover, body.order_page div.body .product-modal .modal-content table.with-checkbox tbody .form-check-input:hover {
+  cursor: pointer;
 }
 
 body.order_page .body-shadow {
