@@ -63,20 +63,7 @@ class Delivery extends Model
     }
 
     public function getRemainingDaysAttribute(){
-        return Carbon::now()->diffInDays(Carbon::parse($this->expected_arrival));
-    }
-
-    public function getTotalInventoryAttribute(){
-    	$variants_quantity = 0;
-    	$products_quantity = 0;
-
-    	if ($this->delivered_variants->count() > 0)
-    		$variants_quantity = $this->delivered_variants->sum('quantity');
-
-    	if ($this->delivered_products->count() > 0)
-    		$variants_quantity = $this->delivered_products->sum('quantity');
-
-    	return $variants_quantity + $products_quantity;
+        return Carbon::now()->diffInDays(Carbon::parse($this->expected_arrival), false);
     }
 
     public function sluggable(){

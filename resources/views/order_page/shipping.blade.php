@@ -2,6 +2,20 @@
 
 @section('content')
 	<div class="container shipping">
+        <div class="row status">
+            <div class="col text-center active">
+                <i class="fas fa-shopping-cart"></i>
+                <h6>Step 1: Shop</h6>
+            </div>
+            <div class="col text-center active">
+                <i class="fas fa-truck"></i>
+                <h6>Step 2: Select shipping</h6>
+            </div>
+            <div class="col text-center">
+                <i class="fas fa-money-check"></i>
+                <h6>Step 3: Checkout</h6>
+            </div>
+        </div>
 		<div class="row">
 			<div class="col-xs-12 col-md-6">
 				<h4 class="with-underline text-bold">SELECT A SHIPPING MODE:</h4>

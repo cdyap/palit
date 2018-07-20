@@ -60,8 +60,10 @@ Route::group(['middleware' => 'auth', 'web'], function () {
 	Route::get('/orders', 'OrdersController@orders_unpaid');
 	Route::get('/orders/paid', 'OrdersController@orders_paid');
 	Route::get('/orders/shipped', 'OrdersController@orders_shipped');
+	Route::get('/orders/cancelled', 'OrdersController@orders_cancelled');
 	Route::post('/orders/{hash}/confirm', 'OrdersController@confirm');
 	Route::post('/orders/{hash}/fulfill', 'OrdersController@fulfill');
+	Route::delete('/orders/{hash}/delete', 'OrdersController@delete');
 
 	//inventory
 	Route::get('/inventory', 'InventoryController@index');
@@ -71,7 +73,7 @@ Route::group(['middleware' => 'auth', 'web'], function () {
 	Route::delete('/inventory/{id}/delete', 'InventoryController@destroy');
 	
 	Route::get('/inventory/delivery/{delivery_slug}', 'InventoryController@view_delivery');
-	Route::post('/inventory/delivery/{delivery_slug}/receive', 'InventoryController@receive_delivery');
+	Route::post('/inventory/delivery/{delivery_id}/receive', 'InventoryController@receive_delivery');
 
 	Route::post('/sort', '\Rutorika\Sortable\SortableController@sort');
 	
@@ -95,7 +97,7 @@ Route::post('/{company_slug}/shipping', 'OrdersController@shipping');
 Route::get('/{company_slug}/shipping', 'OrdersController@shipping');
 
 Route::post('/{company_slug}/checkout', 'OrdersController@checkout');
-Route::get('/{company_slug}/checkout', 'OrdersController@redirect_to_shipping');
+Route::get('/{company_slug}/checkout', 'OrdersController@checkout');
 
 Route::post('/{company_slug}/save-order', 'OrdersController@store');
 Route::get('/{company_slug}/save-order', 'OrdersController@redirect_to_home');

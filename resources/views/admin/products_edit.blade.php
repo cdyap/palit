@@ -82,7 +82,6 @@
 				@if($product->variants->count() == 0)
 					<div class="block">
 						<h4>Inventory:</h4>
-						<p class="note">If this product will have variants, you may leave this field blank.<br>The quantity will be the sum of the quantities of its variants.</p>
 						<div class="form-row">
 							<div class="form-group col-sm-6">
 								<label for="quantity">Initial quantity:</label>

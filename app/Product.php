@@ -45,43 +45,36 @@ class Product extends Model
         return $this->currency . " " . number_format($this->price, 2, '.', ',');
     }
 
-    public function getTotalInventoryAttribute(){
-        if ($this->variants->count() > 0) {
-            return $this->variants->sum('inventory');
-        } else {
-            if(!empty($this->quantity))
-                return $this->quantity;
-            else 
-                return 0;
-        }
-    }
-
-    //get counts
+    //COMPUTE FOR AVAILABLE INVENTORY
+    //Get initial quantities of variants
     public function variantQuantity(){
         return $this->hasOne('App\Variant')
             ->selectRaw('product_id, sum(inventory) as aggregate')
             ->groupBy('product_id');
     }
 
+    //Get delivered quantities of delivered variants
     public function deliveredVariantQuantity(){
         return $this->hasOne('App\DeliveredVariant')
             ->selectRaw('product_id, sum(delivered_quantity) as aggregate')
             ->groupBy('product_id');
     }
 
+    //Get delivered quantities of delivered products
     public function deliveredProductQuantity(){
         return $this->hasOne('App\DeliveredProduct')
             ->selectRaw('product_id, sum(delivered_quantity) as aggregate')
             ->groupBy('product_id');
     }
 
+    //Get quantity of all pending orders
     public function fulfilledOrders(){
         return $this->hasOne('App\OrderItem')
             ->selectRaw('product_id, sum(quantity) as aggregate')
-            ->where('is_fulfilled', true)
             ->groupBy('product_id');
     }
 
+    //Product->quantity + variantQuantity + deliveredVariantQuantity + deliveredProductQuantitiy - fulfilledOrders
     public function getAvailableInventoryAttribute(){
         // if variantQuantity is not loaded already, let's do it first
         if ( ! $this->relationLoaded('variantQuantity')) 
@@ -111,33 +104,58 @@ class Product extends Model
         $order_count = $this->getRelation('fulfilledOrders');
         $orders = ($order_count) ? (int) $order_count->aggregate : 0;
 
-        return $variant  + $delivered_variant + $delivered_product + $this->quantity - $orders;
+        return $variant + $delivered_variant + $delivered_product + $this->quantity - $orders;
     }
 
+    //COMPUTE FOR INCOMING INVENTORY
+    //Get initial quantities of delivered variants
     public function deliveredVariantInitial(){
         return $this->hasOne('App\DeliveredVariant')
             ->selectRaw('product_id, sum(quantity) as aggregate')
             ->groupBy('product_id');
     }
 
-    //sum of quantity of delivered variants
+    //Get initial quantities of delivered products
+    public function deliveredProductInitial(){
+        return $this->hasOne('App\DeliveredProduct')
+            ->selectRaw('product_id, sum(quantity) as aggregate')
+            ->groupBy('product_id');
+    }
+
+    //(deliveredVariantInitial - deliveredVariantQuantity) + (deliveredProductInitial - deliveredProductQuantity)
     public function getIncomingInventoryAttribute(){
         // if deliveredVariantInitial is not loaded already, let's do it first
         if ( ! $this->relationLoaded('deliveredVariantInitial')) 
             $this->load('deliveredVariantInitial');
          
         $delivered_variant_quantity = $this->getRelation('deliveredVariantInitial');
-        $quantity = ($delivered_variant_quantity) ? (int) $delivered_variant_quantity->aggregate : 0;
+        $initial_variants = ($delivered_variant_quantity) ? (int) $delivered_variant_quantity->aggregate : 0;
 
         // if deliveredVariantQuantity is not loaded already, let's do it first
         if ( ! $this->relationLoaded('deliveredVariantQuantity')) 
             $this->load('deliveredVariantQuantity');
          
         $delivered_delivered_quantity = $this->getRelation('deliveredVariantQuantity');
-        $delivered = ($delivered_delivered_quantity) ? (int) $delivered_delivered_quantity->aggregate : 0;
+        $delivered_variants = ($delivered_delivered_quantity) ? (int) $delivered_delivered_quantity->aggregate : 0;
 
-        return $quantity - $delivered;
+        // if deliveredProductInitial is not loaded already, let's do it first
+        if ( ! $this->relationLoaded('deliveredProductInitial')) 
+            $this->load('deliveredProductInitial');
+         
+        $delivered_delivered_quantity = $this->getRelation('deliveredProductInitial');
+        $initial_products = ($delivered_delivered_quantity) ? (int) $delivered_delivered_quantity->aggregate : 0;
+
+        // if deliveredProductQuantity is not loaded already, let's do it first
+        if ( ! $this->relationLoaded('deliveredProductQuantity')) 
+            $this->load('deliveredProductQuantity');
+         
+        $delivered_delivered_quantity = $this->getRelation('deliveredProductQuantity');
+        $delivered_products = ($delivered_delivered_quantity) ? (int) $delivered_delivered_quantity->aggregate : 0;
+
+        return ($initial_products - $delivered_products) + ($initial_variants - $delivered_variants);
     }
+
+
 
     //if item_per_shipment is 2, 2 pieces will fit in one shipment. Each item will occupy 1/2 space.
     public function getShippingFactorAttribute(){

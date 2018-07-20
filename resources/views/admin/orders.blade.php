@@ -20,7 +20,7 @@
 	@endif
 	</div>
 	<br>
-	<h5 class="tabs"><a href="/orders" class="{{$order_type == 'Unpaid' ? 'active' : ''}}">Unpaid</a> <a href="/orders/paid" class="{{$order_type == 'Paid' ? 'active' : ''}}">Paid</a> <a href="/orders/shipped" class="{{$order_type == 'Shipped' ? 'active' : ''}}">Shipped</a> <a href="/orders/archived" class="{{$order_type == 'Archived' ? 'active' : ''}}">Archive</a></h5>
+	<h5 class="tabs"><a href="/orders" class="{{$order_type == 'Unpaid' ? 'active' : ''}}">Unpaid</a> <a href="/orders/paid" class="{{$order_type == 'Paid' ? 'active' : ''}}">Paid</a> <a href="/orders/shipped" class="{{$order_type == 'Shipped' ? 'active' : ''}}">Shipped</a> <a href="/orders/cancelled" class="{{$order_type == 'Cancelled' ? 'active' : ''}}">Cancelled</a></h5>
 	@if($orders->count() > 0)
 		<table class="table table-striped table-hover order-table">
 			<thead>
@@ -38,7 +38,11 @@
 						<td>{{$order->hash}}</td>
 						<td>{{$order->first_name . " " . $order->last_name}}</td>
 						<td>{{$order->shipping_address_1 . $order->shipping_address_2}}</td>
-						<td class="text-right">{{$order->total}}</td>
+						@if(!$order->trashed())
+                            <td class="text-right">{{$order->total}}</td>
+                        @else
+                        	<td class="text-right">{{$order->total_trashed}}</td>
+                        @endif    
 						<td class="text-right">{{$order->date_ordered}}</td>
 					</tr>
 				@endforeach
@@ -91,13 +95,18 @@
 										@endif
 									</div>
 								</div>
-								@if(empty($order->date_paid))
+								@if(empty($order->date_paid) && !$order->trashed())
 									<br><br>								
-									<form action="/orders/{{$order->hash}}/confirm" method="POST">
+									<form action="/orders/{{$order->hash}}/confirm" method="POST" class="float-left" style="display:inline-block">
 										<input type="hidden" name="_token" value="{{ csrf_token() }}">
 										<button type="submit">Confirm payment</button>
 									</form>
-								@elseif(!empty($order->date_paid) && empty($order->date_fulfilled))
+									<form action="/orders/{{$order->hash}}/delete" method="POST" class="float-left" style="display:inline-block">
+										<input type="hidden" name="_token" value="{{ csrf_token() }}">
+										<input type="hidden" name="_method" value="delete" />
+										<button type="submit" class="button ghost hover-red">Cancel order</button>
+									</form>
+								@elseif(!empty($order->date_paid) && empty($order->date_fulfilled) && !$order->trashed())
 									<p class="caption">Payment received:</p>
 									<h5>{{$order->date_paid}}</h5>
 									<br><br>								
@@ -105,11 +114,14 @@
 										<input type="hidden" name="_token" value="{{ csrf_token() }}">
 										<button type="submit">Ship out</button>
 									</form>
-								@else
+								@elseif(!$order->trashed())
 									<p class="caption">Payment received:</p>
 									<h5>{{$order->date_paid}}</h5>
 									<p class="caption">Shipped out on:</p>
 									<h5>{{$order->date_fulfilled}}</h5>
+								@else
+									<p class="caption">Cancelled on:</p>
+									<h5>{{$order->deleted_at}}</h5>
 								@endif
 								<br>
 							</div>
@@ -125,14 +137,25 @@
 						                        <th class="text-right" >Total</th>
 						                    </thead>
 						                    <tbody>
-						                        @foreach($order->order_items as $item)
-						                            <tr>
-						                                <td class="align-middle">{{$item->product_name}}<br><span class="text-grey">{{$item->variant_description}}</span></td>
-						                                <td class="text-right align-middle">{{$item->quantity}}</td>
-						                                <td class="text-right align-middle">{{$order->company->currency . " " . number_format($item->price, 2, '.', ',')}}</td>
-						                                <td class="text-right align-middle">{{$order->company->currency . " " . number_format($item->total_price, 2, '.', ',')}}</td>
-						                            </tr>
-						                        @endforeach
+						                    	@if(!$order->trashed())
+							                        @foreach($order->order_items as $item)
+							                            <tr>
+							                                <td class="align-middle">{{$item->product_name}}<br><span class="text-grey">{{$item->variant_description}}</span></td>
+							                                <td class="text-right align-middle">{{$item->quantity}}</td>
+							                                <td class="text-right align-middle">{{$order->company->currency . " " . number_format($item->price, 2, '.', ',')}}</td>
+							                                <td class="text-right align-middle">{{$order->company->currency . " " . number_format($item->total_price, 2, '.', ',')}}</td>
+							                            </tr>
+							                        @endforeach
+						                        @else
+							                        @foreach($order->order_items_trashed as $item)
+							                            <tr>
+							                                <td class="align-middle">{{$item->product_name}}<br><span class="text-grey">{{$item->variant_description}}</span></td>
+							                                <td class="text-right align-middle">{{$item->quantity}}</td>
+							                                <td class="text-right align-middle">{{$order->company->currency . " " . number_format($item->price, 2, '.', ',')}}</td>
+							                                <td class="text-right align-middle">{{$order->company->currency . " " . number_format($item->total_price, 2, '.', ',')}}</td>
+							                            </tr>
+							                        @endforeach
+						                        @endif
 						                        <tr class="">
 						                            <td colspan="2"><span class="note">SHIPPING:<br></span>{{$order->shipping_method}}</td>
 						                            <td></td>
@@ -141,7 +164,11 @@
 						                        <tr class="text-bold">
 						                            <td colspan="2">Total amount due:</td>
 						                            <td></td>
-						                            <td class="text-right align-middle">{{$order->total}}</td>
+						                            @if(!$order->trashed())
+							                            <td class="text-right align-middle">{{$order->total}}</td>
+						                            @else
+						                            	<td class="text-right align-middle">{{$order->total_trashed}}</td>
+							                        @endif    
 						                        </tr>
 						                    </tbody>
 						                </table>

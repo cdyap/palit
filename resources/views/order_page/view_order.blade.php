@@ -4,16 +4,16 @@
 	<div class="container view_order">
 		<div class="row status">
 			<div class="col text-center {{!empty($order->date_ordered) ? 'active' : '' }}">
-				<i class="fas fa-shopping-basket"></i>
-				<h6>Received</h6>
+				<i class="fas fa-clipboard-list"></i>
+				<h6>Order received</h6>
 			</div>
 			<div class="col text-center {{!empty($order->date_paid) ? 'active' : '' }}">
 				<i class="fas fa-receipt"></i>
-				<h6>Paid</h6>
+				<h6>Payment received</h6>
 			</div>
 			<div class="col text-center {{!empty($order->date_fulfilled) ? 'active' : '' }}">
 				<i class="fas fa-shipping-fast"></i>
-				<h6>Shipped</h6>
+				<h6>Order shipped</h6>
 			</div>
 		</div>
 		<br><br>

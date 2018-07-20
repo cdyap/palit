@@ -10,7 +10,7 @@ class Variant extends Model
 {
     //
 	public $timestamps = false;
-	protected $appends = array('view_price', 'available_inventory');
+	protected $appends = array('view_price', 'available_inventory', 'sellable_inventory');
 	protected $dates = ['deleted_at'];
 	protected $fillable = ['inventory', 'price', 'attribute_1', 'attribute_2', 'attribute_3', 'attribute_4', 'attribute_5', 'SKU'];
     
@@ -38,7 +38,14 @@ class Variant extends Model
     public function fulfilledOrders(){
         return $this->hasOne('App\OrderItem')
             ->selectRaw('variant_id, sum(quantity) as aggregate')
-            ->where('is_fulfilled', true)
+            // ->where('is_fulfilled', true)
+            ->groupBy('variant_id');
+    }
+
+    public function pendingOrders(){
+        return $this->hasOne('App\OrderItem')
+            ->selectRaw('variant_id, sum(quantity) as aggregate')
+            ->where('is_fulfilled', false)
             ->groupBy('variant_id');
     }
 
@@ -68,7 +75,7 @@ class Variant extends Model
         return $quantity - $delivered;
     }
 
-    //initial quantity + sum of delivered quantity of delivered variants
+    //initial quantity + sum of delivered quantity of delivered variants - fulfilledOrders
     public function getAvailableInventoryAttribute(){
         // if deliveredVariantQuantity is not loaded already, let's do it first
         if ( ! $this->relationLoaded('deliveredVariantQuantity')) 
@@ -85,9 +92,32 @@ class Variant extends Model
         $orders = ($order_count) ? (int) $order_count->aggregate : 0;
 
         return $this->inventory + $delivered_variant - $orders;
-
     }
    
+    public function getSellableInventoryAttribute(){
+        // if deliveredVariantQuantity is not loaded already, let's do it first
+        if ( ! $this->relationLoaded('deliveredVariantQuantity')) 
+            $this->load('deliveredVariantQuantity');
+         
+        $variant_count = $this->getRelation('deliveredVariantQuantity');
+        $delivered_variant = ($variant_count) ? (int) $variant_count->aggregate : 0;
+
+        // if fulfilledOrders is not loaded already, let's do it first
+        if ( ! $this->relationLoaded('fulfilledOrders')) 
+            $this->load('fulfilledOrders');
+         
+        $order_count = $this->getRelation('fulfilledOrders');
+        $orders = ($order_count) ? (int) $order_count->aggregate : 0;
+
+        // if pendingOrders is not loaded already, let's do it first
+        if ( ! $this->relationLoaded('pendingOrders')) 
+            $this->load('pendingOrders');
+
+        $pending_orders = $this->getRelation('pendingOrders');
+        $pending_orders = ($pending_orders) ? (int) $pending_orders->aggregate : 0;
+
+        return $this->inventory + $delivered_variant - $orders - $pending_orders;
+    }
 
     public function getDescriptionAttribute(){
         $description = $this->attribute_1;

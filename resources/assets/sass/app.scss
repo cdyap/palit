@@ -6,7 +6,7 @@
 
 //COLORS
 $grey: #7F7F7F;
-$grey-blue: #142A38;
+$grey-blue: #20384D;
 $accent: #841257;
 $red: #F22613;
 $green: #20bf6b;
@@ -20,8 +20,9 @@ div.block {
 	background: white;
 	padding:20px;
 	@extend .z-depth-1;
+	@extend .transition-instant;
 	width:100%;
-	transition: opacity 0.1s ease-out;
+	// transition: opacity 0.1s ease-out;
 	height:auto;
 	margin-top: 30px;
 	margin-bottom:30px;
@@ -100,7 +101,7 @@ table.settings-table {
     background-color: rgba(0,0,0,.01);
 }
 
-.table-striped tbody tr:hover {
+.table-hover tbody tr:hover {
     background-color: rgba(0,0,0,.05);
 }
 
@@ -483,7 +484,7 @@ a.button, input.button, button, .modal button[type="submit"]{
 	background: $accent;
 	color:white;
 	font-weight:400;
-	font-size:1em;
+	font-size:1rem;
 	letter-spacing:1px;
 	transition:  0.2s ease-in;
 	outline: none;
@@ -494,6 +495,11 @@ a.button, input.button, button, .modal button[type="submit"]{
 		@extend .z-depth-2;
 		cursor: pointer;
 	}
+}
+
+a.button, button.ghost {
+	padding-top: 9.5px;
+	padding-bottom: 9.5px;
 }
 
 button:focus, a:focus {
@@ -555,6 +561,12 @@ button.button.ghost, a.ghost {
 	}
 }
 
+.ghost.hover-red:hover {
+	background: $red;
+	color: white;
+	border-color: $red;
+}
+
 tr .button {
 	background: none;
 	color: $accent!important;
@@ -597,6 +609,13 @@ tr.active {
 
 
 //Transitions
+.transition-instant {
+	transition:All 0.2s ease-in-out;
+	-webkit-transition:All 0.2s ease-in-out;
+	-moz-transition:All 0.2s ease-in-out;
+	-o-transition:All 0.2s ease-in-out;
+}
+
 .transition-veryfast {
 	transition:All 0.5s ease;
 	-webkit-transition:All 0.5s ease;
@@ -790,33 +809,19 @@ tr.active {
 
 //order page css
 body.order_page {
-	background: $grey-blue;
-	.header {
-		padding: 50px 20px;
-		color: white;
-		width:100vw;
-		position:fixed;
-		top:0;
-		z-index:1;
-		h1 {
-			z-index:2;
-			transition: all 0.2s ease-out;
-		}
-
-		h1.scrolled-down {
-			color:$grey;
-			font-size:1.5rem;
-		}
+	background: #F6F7F9;
+	overflow-x: hidden;
+	.action-buttons {
+		margin-top: 50px;
 	}
 	div.body {
-		background: white;
-		border-radius: 20px 20px 0px 0px;
+		// border-radius: 20px 20px 0px 0px;
 		width: 100vw;
-		margin-top:150px;
+		margin-top:50px;
 		z-index:3;
 		padding-top:50px;
 		padding-bottom:100px;
-
+		min-height: 100vh;
 		h2 {
 			font-weight:700;
 		}
@@ -834,6 +839,9 @@ body.order_page {
 		    bottom: 0;
 		    left: 0;
 		    border-bottom: 3px solid $accent;
+		}
+		.card-deck {
+			width:100%;
 		}
 
 		.card {
@@ -861,9 +869,14 @@ body.order_page {
 		.product-modal {
 			.modal-content {
 				min-height: 100vh;
+				border-width: 15px;
 				.modal-body{
 				    max-height: calc(100vh - 50px);
 				    overflow-y: auto;
+				    margin-top:-30px;
+				    padding-left:20px;
+				    padding-right:20px;
+				    padding-bottom: 150px;
 				}
 				h2 {
 					margin-top:50px;
@@ -898,13 +911,67 @@ body.order_page {
 		}
 
 	}
-
-	.body-shadow {
-		-webkit-box-shadow: 0px -7px 36px -5px rgba(0,0,0,0.47);
-		-moz-box-shadow: 0px -7px 36px -5px rgba(0,0,0,0.47);
-		box-shadow: 0px -7px 36px -5px rgba(0,0,0,0.47);
+	.header {
+		padding: 50px 20px;
+		width:90vw;
+		margin-top:50px;
+		background: $grey-blue;
+		color: white;
+		top:0;
+		z-index:1;
+		box-shadow: 10px 15px #E1E1E1;
+		h1 {
+			z-index:2;
+			font-size:3.5rem;
+			text-align: left;
+		}
 	}
-
+	.header.scrolled-down {
+		h1 {
+			color:$grey;
+			font-size:1.5rem;
+			text-align: center!important;
+			position:fixed;
+			top:0;
+			margin-top:40px;
+		}
+	}
+	footer {
+		color: white;
+		padding: 50px 0px;
+		width:100vw;
+		background: #191919;
+		.logo svg {
+			height:100px;
+		}
+	}
+	.loader {
+		width:100vw;
+		height:100vh;
+		background:$accent;
+		z-index:1500;
+		position:fixed;
+		top:0;
+		.logo svg {
+			height:200px;
+		}
+	}
+	.loader.hide {
+		height:0;
+		visibility: hidden;
+	}
+	.status {
+		i {
+			font-size:2em;
+		}
+		h6 {
+			margin-top:10px;
+		}
+		.active i {
+			color: $green;
+		}
+		margin-bottom:40px;	
+	}
 	.view-cart{
 		width:100vw;
 		background: white;
@@ -927,9 +994,14 @@ body.order_page {
 	}
 
 	.cart-modal {
+		.modal-content {
+			border-width: 15px;
+		}
 		.modal-body	{
-			padding-left: 15%;
-			padding-right: 15%;
+			margin-top:-30px!important;
+			padding-left: 15%!important;
+			padding-right: 15%!important;
+			padding-bottom:150px;
 			h1.with-underline {
 				margin-bottom:20px;
 				position: relative;

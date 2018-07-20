@@ -40,6 +40,20 @@
 				<p class="caption">Lag to confirmation:</p>
 				<h3>{{round($lead_time_payment[0]->avg)}} days</h3>
 			</div>
+			<div class="block">
+				<h4>Unpaid orders:</h4>
+				<p class="caption">Total amount:</p>
+				<h3>{{$company->currency . " " . number_format($unpaid_orders_total[0]->aggregate,2,'.',',')}}</h3>
+				<p class="caption">Count:</p>
+				<h3>{{$unpaid_orders_count[0]->count}}</h3>
+			</div>
+			<div class="block">
+				<h4>Unfulfilled and paid orders:</h4>
+				<p class="caption">Total amount:</p>
+				<h3>{{$company->currency . " " . number_format($unfulfilled_orders_total[0]->aggregate,2,'.',',')}}</h3>
+				<p class="caption">Count:</p>
+				<h3>{{$unfulfilled_orders_count[0]->count}}</h3>
+			</div>
 		</div>
 	</div>
 @endsection

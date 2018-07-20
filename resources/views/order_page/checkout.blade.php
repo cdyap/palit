@@ -21,7 +21,7 @@
 		@endif
 		@if(count($errors) > 0)
 			<div class="alert alert-error alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>
-				You have entered invalid information
+				{!! implode('', $errors->all(':message<br>')) !!}
 				<button type="button" class="close" data-dismiss="alert" aria-label="Close">
 				<span aria-hidden="true">&times;</span>
 				</button>
@@ -103,7 +103,7 @@
 						</div>
 						<div class="form-group col-xs-4 col-sm-3">
 							<label for="city">Zip code:*</label>
-							<input type="number" name="zip_code" class="form-control {{ $errors->has('zip_code') ? 'has-error' : ''}}"  value="{{ old('zip_code') }}">
+							<input type="number" name="zip_code" class="form-control {{ $errors->has('zip_code') ? 'has-error' : ''}}"  value="{{ old('zip_code') }}" min="0">
 						</div>
 						@if($errors->has('city') || $errors->has('zip_code'))
 							<p class="error-note">Please enter your city and zip code for delivery</p>
@@ -128,7 +128,7 @@
 					</div>
 					<div class="row payment_method">
 						@if($errors->has('payment_method'))
-							<p class="error-note" style="">Please select a payment method</p>
+							<h5 class="text-red" style="margin-top:25px;">Please select a payment method</h5>
 						@endif
 						<div class="col-xs-12 col-md-12" style="padding-left: 0;">
 							@foreach($payment_methods->where('is_available', true) as $payment_method)
@@ -146,7 +146,7 @@
 					<div class="form-row">
 						<div class="form-group col-xs-12">
 							<a href="/{{$company->slug}}/shipping" class="button ghost">< Select shipping method</a>
-							<button type="submit">Pay ></button>	
+							<button type="submit">Pay ></i></button>	
 						</div>
 					</div>
 					

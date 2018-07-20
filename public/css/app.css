@@ -7,7 +7,6 @@ div.block {
   background: white;
   padding: 20px;
   width: 100%;
-  transition: opacity 0.1s ease-out;
   height: auto;
   margin-top: 30px;
   margin-bottom: 30px;
@@ -83,7 +82,7 @@ table.settings-table tr:hover {
   background-color: rgba(0, 0, 0, 0.01);
 }
 
-.table-striped tbody tr:hover {
+.table-hover tbody tr:hover {
   background-color: rgba(0, 0, 0, 0.05);
 }
 
@@ -467,7 +466,7 @@ a.button, input.button, button, .modal button[type="submit"] {
   background: #841257;
   color: white;
   font-weight: 400;
-  font-size: 1em;
+  font-size: 1rem;
   letter-spacing: 1px;
   transition: 0.2s ease-in;
   outline: none;
@@ -478,6 +477,11 @@ a.button:hover, input.button:hover, button:hover, .modal button[type="submit"]:h
   color: white;
   text-decoration: none;
   cursor: pointer;
+}
+
+a.button, button.ghost {
+  padding-top: 9.5px;
+  padding-bottom: 9.5px;
 }
 
 button:focus, a:focus {
@@ -543,6 +547,12 @@ button.button.ghost:hover, a.ghost:hover {
   border-color: #841257;
 }
 
+.ghost.hover-red:hover {
+  background: #F22613;
+  color: white;
+  border-color: #F22613;
+}
+
 tr .button {
   background: none;
   color: #841257 !important;
@@ -582,6 +592,13 @@ td .dropdown-menu {
 
 tr.active {
   background: #ECECEC;
+}
+
+.transition-instant, div.block {
+  transition: All 0.2s ease-in-out;
+  -webkit-transition: All 0.2s ease-in-out;
+  -moz-transition: All 0.2s ease-in-out;
+  -o-transition: All 0.2s ease-in-out;
 }
 
 .transition-veryfast, table.settings-table tr, body.order_page .shipping .shipping-method > input + div.block, body.order_page .shipping .payment-method > input + div.block, body.order_page .checkout .shipping-method > input + div.block, body.order_page .checkout .payment-method > input + div.block {
@@ -654,7 +671,7 @@ tr.active {
 .admin .sidebar {
   width: 80px;
   padding-top: 0px;
-  background-color: #142A38;
+  background-color: #20384D;
   height: 100vh;
   position: fixed;
   top: 0;
@@ -759,7 +776,7 @@ tr.active {
 
 @media screen and (max-width: 767px) {
   .admin .navbar, .admin .content .page-header, .admin .navbar a {
-    background: #142A38 !important;
+    background: #20384D !important;
     color: white !important;
   }
   .admin .content {
@@ -772,36 +789,21 @@ tr.active {
 }
 
 body.order_page {
-  background: #142A38;
+  background: #F6F7F9;
+  overflow-x: hidden;
 }
 
-body.order_page .header {
-  padding: 50px 20px;
-  color: white;
-  width: 100vw;
-  position: fixed;
-  top: 0;
-  z-index: 1;
-}
-
-body.order_page .header h1 {
-  z-index: 2;
-  transition: all 0.2s ease-out;
-}
-
-body.order_page .header h1.scrolled-down {
-  color: #7F7F7F;
-  font-size: 1.5rem;
+body.order_page .action-buttons {
+  margin-top: 50px;
 }
 
 body.order_page div.body {
-  background: white;
-  border-radius: 20px 20px 0px 0px;
   width: 100vw;
-  margin-top: 150px;
+  margin-top: 50px;
   z-index: 3;
   padding-top: 50px;
   padding-bottom: 100px;
+  min-height: 100vh;
 }
 
 body.order_page div.body h2 {
@@ -823,6 +825,10 @@ body.order_page div.body h2:not(.no-underline):before {
   bottom: 0;
   left: 0;
   border-bottom: 3px solid #841257;
+}
+
+body.order_page div.body .card-deck {
+  width: 100%;
 }
 
 body.order_page div.body .card {
@@ -850,11 +856,16 @@ body.order_page div.body .modal-dialog {
 
 body.order_page div.body .product-modal .modal-content {
   min-height: 100vh;
+  border-width: 15px;
 }
 
 body.order_page div.body .product-modal .modal-content .modal-body {
   max-height: calc(100vh - 50px);
   overflow-y: auto;
+  margin-top: -30px;
+  padding-left: 20px;
+  padding-right: 20px;
+  padding-bottom: 150px;
 }
 
 body.order_page div.body .product-modal .modal-content h2 {
@@ -890,8 +901,75 @@ body.order_page div.body .product-modal .modal-content table.with-checkbox tbody
   cursor: pointer;
 }
 
-body.order_page .body-shadow {
-  box-shadow: 0px -7px 36px -5px rgba(0, 0, 0, 0.47);
+body.order_page .header {
+  padding: 50px 20px;
+  width: 90vw;
+  margin-top: 50px;
+  background: #20384D;
+  color: white;
+  top: 0;
+  z-index: 1;
+  box-shadow: 10px 15px #E1E1E1;
+}
+
+body.order_page .header h1 {
+  z-index: 2;
+  font-size: 3.5rem;
+  text-align: left;
+}
+
+body.order_page .header.scrolled-down h1 {
+  color: #7F7F7F;
+  font-size: 1.5rem;
+  text-align: center !important;
+  position: fixed;
+  top: 0;
+  margin-top: 40px;
+}
+
+body.order_page footer {
+  color: white;
+  padding: 50px 0px;
+  width: 100vw;
+  background: #191919;
+}
+
+body.order_page footer .logo svg {
+  height: 100px;
+}
+
+body.order_page .loader {
+  width: 100vw;
+  height: 100vh;
+  background: #841257;
+  z-index: 1500;
+  position: fixed;
+  top: 0;
+}
+
+body.order_page .loader .logo svg {
+  height: 200px;
+}
+
+body.order_page .loader.hide {
+  height: 0;
+  visibility: hidden;
+}
+
+body.order_page .status {
+  margin-bottom: 40px;
+}
+
+body.order_page .status i {
+  font-size: 2em;
+}
+
+body.order_page .status h6 {
+  margin-top: 10px;
+}
+
+body.order_page .status .active i {
+  color: #20bf6b;
 }
 
 body.order_page .view-cart {
@@ -916,9 +994,15 @@ body.order_page .view-cart:hover {
   color: white;
 }
 
+body.order_page .cart-modal .modal-content {
+  border-width: 15px;
+}
+
 body.order_page .cart-modal .modal-body {
-  padding-left: 15%;
-  padding-right: 15%;
+  margin-top: -30px !important;
+  padding-left: 15% !important;
+  padding-right: 15% !important;
+  padding-bottom: 150px;
 }
 
 body.order_page .cart-modal .modal-body h1.with-underline {

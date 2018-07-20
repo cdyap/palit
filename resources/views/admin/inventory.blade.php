@@ -278,7 +278,7 @@
 					</table>
 					@foreach($pending_deliveries as $delivery)
 						<!-- Delivery details modal -->
-						<div class="modal fade bd-example-modal-lg" tabindex="-1" role="dialog" id="deliveryModal{{$delivery->id}}" aria-labelledby="Delivery modal" aria-hidden="true">
+						<div class="modal fade bd-example-modal-lg delivery-modal" tabindex="-1" role="dialog" id="deliveryModal{{$delivery->id}}" aria-labelledby="Delivery modal" aria-hidden="true">
 							<div class="modal-dialog modal-lg modal-dialog-centered" role="document">
 								<div class="modal-content ">
 									<div class="modal-header">
@@ -295,7 +295,7 @@
 											</div>
 											<div class="col">
 												<p class="caption">DAYS REMAINING:</p>
-												<h5>{{Carbon\Carbon::parse($delivery->expected_arrival)->diffInDays(Carbon\Carbon::now())}}</h5>
+												<h5>{{$delivery->remaining_days}}</h5>
 											</div>
 											<div class="col">
 												<p class="caption">ORDERS:</p>
@@ -305,57 +305,60 @@
 										<div class="row">
 											<div class="col">
 												<p class="caption">DELIVERY CART:</p>
-												<table class="table table-striped">
-													<thead>
-														<tr>
-															<th>Product</th>
-															<th>Variant</th>
-															<th class="text-right">Incoming</th>
-															<th class="text-right">Received</th>
-															<th></th>
-														</tr>
-													</thead>
-													<tbody>
-														@foreach($delivery->delivered_products as $delivered_product)
+												<form action="/inventory/delivery/{{$delivery->id}}/receive" method="POST" >
+													<input type="hidden" name="_token" value="{{ csrf_token() }}">
+													<table class="table table-striped">
+														<thead>
 															<tr>
-																<td>{{$delivered_product->product->name}}</td>
-																<td></td>
-																<td class="text-right">{{$delivered_product->quantity}}</td>
-																<td class="text-right">{{$delivered_product->sum('delivered_quantity')}}</td>
-																<td></td>
+																<th>Product</th>
+																<th>Variant</th>
+																<th class="text-right">Incoming</th>
+																<th class="text-right">Received</th>
+																<th class="text-right" style="width:120px;">Quantity</th>
 															</tr>
-														@endforeach
-														@foreach($delivery->delivered_variants as $delivered_variant)
-															<tr>
-																<td>{{$delivered_variant->product->name}}</td>
-																<?php $i = 0; ?>
-																<?php $description = ""; ?>
-																@foreach($product_variant_columns->where('name', 'variant_'.$delivered_variant->product->id) as $column)
-																	<?php $i = $i + 1; ?>
-																	@if($i != 1)
-																		<?php $description = $description . ", "; ?>
-																	@endif
-																	<?php $description = $description . $column->value . ": " . $delivered_variant->variant->{"attribute_" . $i}; ?>
-																@endforeach
+														</thead>
+														<tbody>
+															@foreach($delivery->delivered_products as $delivered_product)
+																<tr>
+																	<td>{{$delivered_product->product->name}}</td>
+																	<td></td>
+																	<td class="text-right">{{$delivered_product->quantity}}</td>
+																	<td class="text-right">{{$delivered_product->delivered_quantity}}</td>
+																	<td><input type="number" class="text-right form-control product-quantity" name="delivered_product[{{$delivered_product->id}}]" min="0" max="{{$delivered_product->quantity - $delivered_product->delivered_quantity}}" value="{{$delivered_product->quantity - $delivered_product->delivered_quantity}}"></td>
+																</tr>
+															@endforeach
+															@foreach($delivery->delivered_variants as $delivered_variant)
+																<tr>
+																	<td>{{$delivered_variant->product->name}}</td>
+																	<?php $i = 0; ?>
+																	<?php $description = ""; ?>
+																	@foreach($product_variant_columns->where('name', 'variant_'.$delivered_variant->product->id) as $column)
+																		<?php $i = $i + 1; ?>
+																		@if($i != 1)
+																			<?php $description = $description . ", "; ?>
+																		@endif
+																		<?php $description = $description . $column->value . ": " . $delivered_variant->variant->{"attribute_" . $i}; ?>
+																	@endforeach
 
-																<td>{{$description}}</td>
-																<td class="text-right">{{$delivered_variant->quantity}}</td>
-																<td class="text-right">{{$delivered_variant->sum('delivered_quantity')}}</td>
+																	<td>{{$description}}</td>
+																	<td class="text-right">{{$delivered_variant->quantity}}</td>
+																	<td class="text-right">{{$delivered_variant->delivered_quantity}}</td>
+																	<td><input type="number" class="text-right form-control product-quantity" name="delivered_variant[{{$delivered_variant->id}}]" min="0" max="{{$delivered_variant->quantity - $delivered_variant->delivered_quantity}}" value="{{$delivered_variant->quantity - $delivered_variant->delivered_quantity}}"></td>
+																</tr>
+															@endforeach
+															<tr style="border-top: 2px solid black">
+																<td></td>
+																<td class="text-right text-bold">Total:</td>
+																<td class="text-right text-bold">{{$delivery->delivered_products->sum('quantity') + $delivery->delivered_variants->sum('quantity')}}</td>
+																<td class="text-right text-bold">{{$delivery->delivered_products->sum('delivered_quantity') + $delivery->delivered_variants->sum('delivered_quantity')}}</td>
 																<td></td>
 															</tr>
-														@endforeach
-														<tr style="border-top: 2px solid black">
-															<td></td>
-															<td class="text-right text-bold">Total:</td>
-															<td class="text-right text-bold">{{$delivery->delivered_products->sum('quantity') + $delivery->delivered_variants->sum('quantity')}}</td>
-															<td class="text-right text-bold">{{$delivery->delivered_products->sum('delivered_quantity') + $delivery->delivered_variants->sum('delivered_quantity')}}</td>
-															<td></td>
-														</tr>
-														
-													</tbody>
-												</table>
-												<br>
-												<a href="/inventory/delivery/{{$delivery->slug}}" class="button">Receive</a>
+															
+														</tbody>
+													</table>
+													<br>
+													<button type="submit" class="button">Receive</a>
+												</form>
 											</div>
 										</div>
 									</div>
@@ -447,7 +450,7 @@
 											</div>
 											<div class="col">
 												<p class="caption">DAYS REMAINING:</p>
-												<h5>{{Carbon\Carbon::parse($delivery->expected_arrival)->diffInDays(Carbon\Carbon::now())}}</h5>
+												<h5>{{$delivery->remaining_days}}</h5>
 											</div>
 											<div class="col">
 												<p class="caption">ORDERS:</p>
@@ -470,7 +473,7 @@
 															<tr>
 																<td>{{$delivered_product->product->name}}</td>
 																<td></td>
-																<td class="text-right">{{$delivered_product->sum('delivered_quantity')}}</td>
+																<td class="text-right">{{$delivered_product->delivered_quantity}}</td>
 															</tr>
 														@endforeach
 														@foreach($delivery->delivered_variants as $delivered_variant)

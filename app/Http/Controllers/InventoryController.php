@@ -29,7 +29,7 @@ class InventoryController extends Controller
         //
         $sidebar = "Inventory";
         $company = Auth::user()->company;
-        $products = Product::with(['variants.delivered_variants', 'delivered_products', 'variants.deliveredVariantQuantity', 'variants.deliveredVariantInitial', 'variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'deliveredVariantInitial', 'variants.fulfilledOrders', 'fulfilledOrders'])->where('company_id', $company->id)->orderBy('name')->get();
+        $products = Product::with(['variants.delivered_variants', 'delivered_products', 'variants.deliveredVariantQuantity', 'variants.deliveredVariantInitial', 'variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'deliveredVariantInitial', 'deliveredProductInitial' ,'variants.fulfilledOrders', 'fulfilledOrders'])->where('company_id', $company->id)->orderBy('name')->get();
         $deliveries = Delivery::with(['delivered_products', 'delivered_variants','deliveredVariantsCount', 'deliveredProductsCount', 'delivered_variants.variant', 'delivered_variants.product', 'delivered_products.product'])->where('company_id', $company->id)->orderBy('expected_arrival')->get();
         $completed_deliveries = $deliveries->where('is_received', true);
         $pending_deliveries = $deliveries->where('is_received', false);
@@ -53,6 +53,7 @@ class InventoryController extends Controller
                                           ->from('orders')
                                           ->whereRaw('date_paid IS NULL')
                                           ->where('company_id', $company->id)
+                                          ->whereRaw('deleted_at IS NULL')
                                           ->whereRaw('date_fulfilled IS NULL');
                                 })
                                 ->get();
@@ -64,6 +65,7 @@ class InventoryController extends Controller
                                           ->from('orders')
                                           ->whereRaw('date_paid IS NOT NULL')
                                           ->where('company_id', $company->id)
+                                          ->whereRaw('deleted_at IS NULL')
                                           ->whereRaw('date_fulfilled IS NULL');
                                 })
                                 ->get();
@@ -101,7 +103,7 @@ class InventoryController extends Controller
     public function getProduct(Request $request){
         // $company = Auth::user()->company;
         try {
-            $product = Product::with('variants')->find($request->product_id);
+            $product = Product::with(['variants.delivered_variants', 'delivered_products', 'variants.deliveredVariantQuantity', 'variants.deliveredVariantInitial', 'variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'deliveredVariantInitial', 'variants.fulfilledOrders', 'fulfilledOrders'])->find($request->product_id);
             $has_variants = false;
             $variant_columns = [];
 
@@ -244,76 +246,70 @@ class InventoryController extends Controller
         return view('admin.delivery_show',compact('sidebar', 'company', 'title', 'delivery', 'product_variant_columns'));
     }
 
-    public function receive_delivery($delivery_slug, Request $request){
+    public function receive_delivery($delivery_id, Request $request){
 
-        //if delivered_variants are present
-        if (!empty($request->delivered_variant)) {
-            $delivered_variants = DeliveredVariant::whereIn('id',array_keys($request->delivered_variant))->get();
-            $delivery = $delivered_variants->first()->delivery;
-            $error_message = [];
-            $i = 0;
+        //Get parameters with more than 0
+        $filtered_products = collect($request->delivered_product)->filter(function ($value, $key) {
+            return $value > 0;
+        });
 
-            foreach($delivered_variants as $delivered_variant) {
-                //set delivered_quantity variable to existing delivered_quantity attribute of delivered_variant
-                $delivered_quantity = $delivered_variant->delivered_quantity;
+        $filtered_variants = collect($request->delivered_variant)->filter(function ($value, $key) {
+            return $value > 0;
+        });
 
-                //add delivered_quantity input to delivered_quantity attribute
-                $delivered_quantity = $delivered_quantity + $request->delivered_variant[$delivered_variant->id]['delivered_quantity'];
-
-                //delivered_quantity attribute must not be greater than ordered quantity
-                if ($delivered_quantity > $delivered_variant->quantity) {
-                    $error_message[$i++] = "Received quantity cannot be greater than ordered quantity.";
-                } else {
-                    $delivered_variant->delivered_quantity = $delivered_quantity;
-                    if ($delivered_variant->delivered_quantity == $delivered_variant->delivered_quantity) {
-                        $delivered_variant->is_delivered = true;
-                    } else {
-                        $delivered_variant->is_delivered = false;
-                    }
-                    $delivered_variant->save();
-                }
-            }
-        }
+        $error_message = array();
 
         //if delivered_products are present
-        if (!empty($request->delivered_product)) {
-            $delivered_products = DeliveredProduct::whereIn('id',array_keys($request->delivered_product))->get();
-            $delivery = $delivered_products->first()->delivery;
+        if ($filtered_products->count() > 0) {
+            $delivered_products = DeliveredProduct::whereIn('id',$filtered_products->keys())->get();
 
             $error_message = [];
-            $i = 0;
 
             foreach($delivered_products as $delivered_product) {
-                //set delivered_quantity variable to existing delivered_quantity attribute of delivered_variant
-                $delivered_quantity = $delivered_product->delivered_quantity;
-
-                //add delivered_quantity input to delivered_quantity attribute
-                $delivered_quantity = $delivered_quantity + $request->delivered_product[$delivered_product->id]['delivered_quantity'];
+                //add input value to current delivered_quantity attribute of delivered_product
+                $delivered_product->delivered_quantity = $delivered_product->delivered_quantity + $filtered_products->get($delivered_product->id);
 
                 //delivered_quantity attribute must not be greater than ordered quantity
-                if ($delivered_quantity > $delivered_product->quantity) {
-                    $error_message[$i++] = "Received quantity cannot be greater than ordered quantity.";
+                if($delivered_product->delivered_quantity > $delivered_product->quantity) {
+                    $error_message[] = "Received quantity cannot be greater than ordered quantity";
                 } else {
-                    $delivered_product->delivered_quantity = $delivered_quantity;
-                    if ($delivered_product->delivered_quantity == $delivered_product->delivered_quantity) {
-                        $delivered_product->is_delivered = true;
-                    } else {
-                        $delivered_product->is_delivered = false;
-                    }
                     $delivered_product->save();
                 }
             }
         }
 
+        //if delivered_variants are present
+        if ($filtered_variants->count() > 0) {
+            $delivered_variants = DeliveredVariant::whereIn('id',$filtered_variants->keys())->get();
+
+            $error_message = [];
+
+            foreach($delivered_variants as $delivered_variant) {
+                //add input value to current delivered_quantity attribute of delivered_product
+                $delivered_variant->delivered_quantity = $delivered_variant->delivered_quantity + $filtered_variants->get($delivered_variant->id);
+
+                //delivered_quantity attribute must not be greater than ordered quantity
+                if($delivered_variant->delivered_quantity > $delivered_variant->quantity) {
+                    $error_message[] = "Received quantity cannot be greater than ordered quantity";
+                } else {
+                    $delivered_variant->save();
+                }
+            }
+        }
+
+        //get updated counts from the database
+        $delivery = Delivery::with('delivered_variants', 'delivered_products')->findOrFail($delivery_id);
+
         //if delivery's quantity = delivered_quantity, set delivery->is_received = true
         if(($delivery->delivered_products->sum('quantity') + $delivery->delivered_variants->sum('quantity')) == ($delivery->delivered_products->sum('delivered_quantity') + $delivery->delivered_variants->sum('delivered_quantity'))) {
             $delivery->is_received = true;
             $delivery->save();
+            return back()->with(['success' => "Delivery from ".$delivery->supplier." complete"]);
         } else {
             $delivery->is_received = false;
             $delivery->save();
+            return back()->with(['success' => "Received ".($filtered_variants->sum() + $filtered_products->sum())." item/s from ".$delivery->supplier]);
         }
-        return back()->with(['success' => "Received items!"]);
 
     }
 }

@@ -44,7 +44,26 @@ class OrdersController extends Controller
             // dd($order->order_items);
         } 
         catch(Exception $e) {
-            return back()->with(['error' => "Order not found!"]);
+            return back()->with(['error' => "Order not found"]);
+        }
+    }
+
+    public function delete($hash, Request $request){
+        try {
+            $order = Order::with('order_items')->where('hash', $hash)->firstOrFail();
+
+            //only delete unfulfilled / unpaid orders
+            if (empty($order->date_fulfilled)) {
+                $hash = $order->hash;
+                $order->order_items()->delete();
+                $order->delete();
+
+                return back()->with(['success' => "Order ".$hash." deleted"]);
+            } else {
+                return back()->with(['error' => "Fulfilled orders may not be deleted"]);
+            }
+        } catch (Exception $e) {
+            return back()->with(['error' => "Order not found"]);
         }
     }
 
@@ -112,10 +131,20 @@ class OrdersController extends Controller
 
     }
 
+    public function orders_cancelled(){
+        $sidebar = "Orders";
+        $company = Auth::user()->company;
+        $orders = Order::onlyTrashed()->with('order_items_trashed', 'company', 'ordersQuantityTrashed')->where('company_id', $company->id)->orderBy('date_ordered')->paginate(10);
+
+        $order_type = "Cancelled";
+
+        return view('admin.orders',compact('sidebar', 'company','orders', 'title', 'order_type'));
+    }
+
     public function orders_paid(){
         $sidebar = "Orders";
         $company = Auth::user()->company;
-        $orders = Order::with('order_items', 'company', 'ordersQuantity')->where('company_id', $company->id)->orderBy('date_ordered')->where('date_paid', '<>', null)->where('date_fulfilled', null)->paginate(5);
+        $orders = Order::with('order_items', 'company', 'ordersQuantity')->where('company_id', $company->id)->orderBy('date_ordered')->where('date_paid', '<>', null)->where('date_fulfilled', null)->paginate(10);
 
         $order_type = "Paid";
 
@@ -125,7 +154,7 @@ class OrdersController extends Controller
     public function orders_shipped(){
         $sidebar = "Orders";
         $company = Auth::user()->company;
-        $orders = Order::with('order_items', 'company', 'ordersQuantity')->where('company_id', $company->id)->orderBy('date_ordered')->where('date_paid', '<>', null)->where('date_fulfilled', '<>', null)->paginate(5);
+        $orders = Order::with('order_items', 'company', 'ordersQuantity')->where('company_id', $company->id)->orderBy('date_ordered')->where('date_paid', '<>', null)->where('date_fulfilled', '<>', null)->paginate(10);
 
         $order_type = "Shipped";
 
@@ -136,7 +165,7 @@ class OrdersController extends Controller
         //
         $sidebar = "Orders";
         $company = Auth::user()->company;
-        $orders = Order::with('order_items', 'company', 'ordersQuantity')->where('company_id', $company->id)->orderBy('date_ordered')->where('date_paid', null)->where('date_fulfilled', null)->paginate(2);
+        $orders = Order::with('order_items', 'company', 'ordersQuantity')->where('company_id', $company->id)->orderBy('date_ordered')->where('date_paid', null)->where('date_fulfilled', null)->paginate(10);
 
         $order_type = "Unpaid";
 
@@ -177,6 +206,8 @@ class OrdersController extends Controller
                 'zip_code' => 'required|numeric',
                 'country' => 'required',
                 'payment_method' => 'required',
+            ], [
+                'payment_method.required' => "Please select a payment method"
             ]);
 
             $hashes = DB::table('orders')->select('hash')->get();
@@ -237,7 +268,7 @@ class OrdersController extends Controller
             Notification::send($company->users, new OrderCreated($order));
 
             // return redirect('/view-order')->with(['success' => "Order placed!", 'order' => $order]);
-            return view('order_page.view_order',compact('company', 'order'));
+            return view('order_page.view_order')->with(['success' => "Order placed!", 'order' => $order, 'company' => $company]);
         } catch (Exception $e) {
 
         }        
@@ -304,15 +335,31 @@ class OrdersController extends Controller
 
     //order page orders
     public function order_page($slug){
-        $company = Company::where('slug', $slug)->with('products', 'collections', 'products.variants', 'products.delivered_products', 'products.delivered_variants', 'products.variants.product', 'settings')->firstOrFail();
+        try {
+            $company = Company::with('settings')->where('slug', $slug)->firstOrFail();
 
-        //get cart for this company
-        $cart = Cart::instance($company->id)->content();
-        $cart_itemcount = Cart::count();
-        $cart_total = Cart::subtotal();
-        $product_variant_columns = $company->settings->whereIn('name', preg_filter('/^/', 'variant_',$cart->pluck('options')->pluck('product')->pluck('id')->toArray()))->sortBy('value_2');
+            $products = Product::with(['collections', 'variants', 'variants.delivered_variants', 'delivered_products', 'variants.deliveredVariantQuantity', 'variants.deliveredVariantInitial', 'variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'deliveredVariantInitial', 'variants.fulfilledOrders', 'fulfilledOrders', 'variants.pendingOrders'])->where('company_id', $company->id)->where('is_available', true)->whereHas('variants', function ($query) {
+                    $query->where('is_available', true);
+                })->orWhereDoesntHave('variants')->orderBy('name')->get();
 
-        return view('order_page.index',compact('company', 'cart', 'product_variant_columns', 'cart_itemcount', 'cart_total'));
+            $products = collect($products)->filter(function ($value, $key) {
+                //remove products only where !overselling_allowed
+                if((!$value->overselling_allowed && $value->available_inventory > 0) || ($value->overselling_allowed)) {
+                    return $value;
+                }
+            });
+
+            //get cart for this company
+            $cart = Cart::instance($company->id)->content();
+            $cart_itemcount = Cart::count();
+            $cart_total = Cart::subtotal();
+            $product_variant_columns = $company->settings->whereIn('name', preg_filter('/^/', 'variant_',$cart->pluck('options')->pluck('product')->pluck('id')->toArray()))->sortBy('value_2');
+
+            return view('order_page.index',compact('company', 'cart', 'product_variant_columns', 'cart_itemcount', 'cart_total', 'products'));
+        } catch (Exception $e) {
+            return $e;
+        }
+        
     }
 
     public function cart($slug){
@@ -330,11 +377,17 @@ class OrdersController extends Controller
         $company = Company::with('settings')->where('slug', $slug)->firstOrFail();
         
         //$request contains _token and product id. remove _token
-        $product = Product::with('variants')->findOrFail(collect($request->except('_token'))->keys()[0]);
+        $product = Product::with(['variants.delivered_variants', 'delivered_products', 'variants.deliveredVariantQuantity', 'variants.deliveredVariantInitial', 'variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'deliveredVariantInitial', 'deliveredProductInitial' ,'variants.fulfilledOrders', 'fulfilledOrders'])->findOrFail(collect($request->except('_token'))->keys()[0]);
+
+        $errors = array(); 
 
         //if $request is for a product
         if(collect($request->except('_token'))->values()->contains('no-v')) {
-            Cart::instance($company->id)->add($product, "Product", 1, $product->price, ['currency' => $product->currency]);
+            if(!$product->overselling_allowed && $product->available_inventory < 1) {
+                $errors[] = "Sorry, we ran out of stocks for " . $product->name;
+            } else {
+                Cart::instance($company->id)->add($product, "Product", 1, $product->price, ['currency' => $product->currency]);
+            }
         } else {
 
             //get all variants given array of variant ids passed in $request
@@ -346,7 +399,6 @@ class OrdersController extends Controller
             //for each included variant, add to cart. use cart for this company
             foreach($variants as $variant) {
                 //generate description of variant
-
                 $i = 0;
                 $description = "";
                 foreach($product_variant_columns as $column){
@@ -359,12 +411,20 @@ class OrdersController extends Controller
                     }
                 }
 
-                Cart::instance($company->id)->add($product, "Product", 1, $variant->price, ['variant' => $variant, 'currency' => $variant->product->currency, 'description' => $description]);
-
+                if(!$variant->product->overselling_allowed && $variant->available_inventory < 1) {
+                    $errors[] = "Sorry, we ran out of stocks for " . $description;
+                } else {
+                    $variant->available_inventory = $variant->available_inventory;
+                    Cart::instance($company->id)->add($product, "Product", 1, $variant->price, ['variant' => $variant, 'currency' => $variant->product->currency, 'description' => $description]);
+                }
             }
         }
 
-        return redirect('/'.$slug)->with(['success' => "Product added to cart. Please enter quantity to order."]);
+        if(count($errors) > 0) {
+            return redirect('/'.$slug)->with(['error' => collect($errors)->implode(',')]);
+        } else {
+            return redirect('/'.$slug)->with(['success' => $product->name . " added to cart"]);
+        }
     }
 
     public function removeFromCart($slug, $rowId){
@@ -526,8 +586,7 @@ class OrdersController extends Controller
     }
 
     public function checkout($slug, Request $request){
-
-        if ( !request()->is('/'.$slug.'/checkout') && url()->previous() !=  url('/'.$slug.'/shipping') ) {
+        if ( !request()->is('/'.$slug.'/checkout') && (url()->previous() !=  url('/'.$slug.'/shipping') && url()->previous() !=  url('/'.$slug.'/checkout'))) {
             return redirect()->to('/'.$slug.'/shipping'); //Send them somewhere else
         }
 
@@ -544,7 +603,7 @@ class OrdersController extends Controller
         $cart_total = Cart::subtotal();
 
         //if None is selected as shipping, add to cart
-        if($request->shipping == 0) {
+        if($request->shipping == 0 && $cart->where('name', 'Shipping')->count() == 0) {
             $shipping = new Shipping;
             $shipping->name = "None";
             $shipping->id = "0";
@@ -570,7 +629,6 @@ class OrdersController extends Controller
                     Cart::remove($rowId);
                 }
             }
-
 
             //compute for shipping using selected shipping mode
             $shipping_mode = Shipping::where('company_id', $company->id)->where('id', $request->shipping)->firstOrFail();
