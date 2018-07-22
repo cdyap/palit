@@ -1,4 +1,10 @@
 @extends('layouts.order_page')
+@section('header')
+    <div class="header">
+        <h1 class="transition-instant">Select Shipping</h1>
+        <h5 class="text-grey">{{$company->name}}</h5>
+    </div>
+@endsection
 
 @section('content')
 	<div class="container shipping">
@@ -17,8 +23,8 @@
             </div>
         </div>
 		<div class="row">
-			<div class="col-xs-12 col-md-6">
-				<h4 class="with-underline text-bold">SELECT A SHIPPING MODE:</h4>
+			<div class="col-xs-12 col-md-5">
+				<h4 class="with-underline text-bold">Let's add a shipping method</h4>
 				<form action="/{{$company->slug}}/checkout" method="POST">
 					<input type="hidden" name="_token" value="{{ csrf_token() }}">
 					@foreach($shippings->where('is_available', true) as $shipping)
@@ -40,8 +46,8 @@
 				</form>
 				
 			</div>
-			<div class="col-xs-12 col-md-6">
-                <h4 class="with-underline text-bold">CART</h4>    
+			<div class="col-xs-12 col-md-7">
+                <h4 class="with-underline text-bold">Your cart</h4>    
                 <table class="table shipping">
                     <thead>
                         <th>Item</th>

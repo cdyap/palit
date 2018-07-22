@@ -3,6 +3,34 @@
   font-family: 'Work Sans', sans-serif;
 }
 
+.hover-pointer:hover {
+  cursor: pointer;
+}
+
+@-webkit-keyframes shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
 div.block {
   background: white;
   padding: 20px;
@@ -65,17 +93,12 @@ table.table th {
   border-top: none;
 }
 
-table.inventory-table tbody tr:hover, table.order-table tbody tr:hover {
-  cursor: pointer;
-}
-
 table.settings-table tr a {
   display: block;
 }
 
 table.settings-table tr:hover {
   background: white;
-  cursor: pointer;
 }
 
 .table-striped tbody tr:nth-of-type(odd) {
@@ -219,10 +242,6 @@ div.empty-state svg {
 }
 
 .list-group-item:last-child:hover, .list-group-item:first-child:hover, .list-group-item:hover {
-  cursor: pointer;
-}
-
-.cursor-pointer:hover {
   cursor: pointer;
 }
 
@@ -941,19 +960,17 @@ body.order_page footer .logo svg {
 body.order_page .loader {
   width: 100vw;
   height: 100vh;
-  background: #841257;
   z-index: 1500;
   position: fixed;
   top: 0;
+  background-size: 400% 400%;
+  background: linear-gradient(215deg, #61045F, #841257);
+  -webkit-animation: shimmer 1s ease infinite;
+  animation: shimmer 1s ease infinite;
 }
 
 body.order_page .loader .logo svg {
   height: 200px;
-}
-
-body.order_page .loader.hide {
-  height: 0;
-  visibility: hidden;
 }
 
 body.order_page .status {
@@ -1023,16 +1040,28 @@ body.order_page .cart-modal .modal-body h1.with-underline:before {
   border-bottom: 3px solid #841257;
 }
 
-body.order_page .cart-modal .modal-body button.remove {
-  background: white;
-  border: 1px solid #7F7F7F;
+body.order_page .cart-modal .modal-body button.quantity-adjuster {
+  border-color: #ced4da;
+  outline: none !important;
+}
+
+body.order_page .cart-modal .modal-body button.quantity-adjuster:hover {
+  background-color: #841257;
+  border-color: #841257;
+  color: white;
+}
+
+body.order_page .cart-modal .modal-body button.quantity-adjuster:active, body.order_page .cart-modal .modal-body button.quantity-adjuster:focus {
+  outline: none !important;
+  box-shadow: none;
+}
+
+body.order_page .cart-modal .modal-body a.remove {
   color: #7F7F7F;
 }
 
-body.order_page .cart-modal .modal-body button.remove:hover {
-  background: #F22613;
-  border-color: #F22613;
-  color: white;
+body.order_page .cart-modal .modal-body a.remove:hover {
+  color: #F22613;
 }
 
 body.order_page .checkout .form-group {

@@ -16,9 +16,9 @@
 	<div class="col-xs-12 col-md-4">
 		<table class="table settings-table">
 			<tbody>
-				<tr><td><a href="/settings/company">Company</a></td></tr>
-				<tr><td><a href="/settings/shipping">Shipping</a></td></tr>
-				<tr><td><a href="/settings/payment_methods">Payment methods</a></td></tr>
+				<tr class="hover-pointer"><td><a href="/settings/company">Company</a></td></tr>
+				<tr class="hover-pointer"><td><a href="/settings/shipping">Shipping</a></td></tr>
+				<tr class="hover-pointer"><td><a href="/settings/payment_methods">Payment methods</a></td></tr>
 			</tbody>
 		</table>
 	</div>

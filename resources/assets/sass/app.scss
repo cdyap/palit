@@ -12,10 +12,27 @@ $red: #F22613;
 $green: #20bf6b;
 $bg: #F8F9FA;
 
+//UTILITIES
+.hover-pointer:hover {
+	cursor: pointer;
+}
+@-webkit-keyframes shimmer {
+	 0%{background-position:0% 50%}
+	 50%{background-position:100% 50%}
+	 100%{background-position:0% 50%}
+}
+@-moz-keyframes shimmer {
+	 0%{background-position:0% 50%}
+	 50%{background-position:100% 50%}
+	 100%{background-position:0% 50%}
+}
+@keyframes shimmer { 
+	 0%{background-position:0% 50%}
+	 50%{background-position:100% 50%}
+	 100%{background-position:0% 50%}
+}
 
 // GENERAL
-
-
 div.block {
 	background: white;
 	padding:20px;
@@ -78,12 +95,6 @@ table.table {
 	}
 }
 
-table.inventory-table, table.order-table {
-	tbody tr:hover {
-		cursor: pointer;
-	}
-}
-
 table.settings-table {
 	tr {
 		a {
@@ -92,7 +103,6 @@ table.settings-table {
 		@extend .transition-veryfast;
 		&:hover {
 			background: white;
-			cursor: pointer;
 		}
 	}
 }
@@ -234,10 +244,6 @@ div.empty-state {
 		@extend .z-depth-1;
 		cursor: pointer;
 	}
-}
-
-.cursor-pointer:hover {
-	cursor: pointer;
 }
 
 .dz-image-preview, .dz-image {
@@ -948,17 +954,21 @@ body.order_page {
 	.loader {
 		width:100vw;
 		height:100vh;
-		background:$accent;
 		z-index:1500;
 		position:fixed;
 		top:0;
+		background-size: 400% 400%;
+		background: linear-gradient(215deg, #61045F, $accent);
+		-webkit-animation: shimmer 1s ease infinite;
+		-moz-animation: shimmer 1s ease infinite;
+		animation: shimmer 1s ease infinite;
 		.logo svg {
 			height:200px;
 		}
 	}
 	.loader.hide {
-		height:0;
-		visibility: hidden;
+		// height:0;
+		// visibility: hidden;
 	}
 	.status {
 		i {
@@ -1018,15 +1028,25 @@ body.order_page {
 			    left: 0;
 			    border-bottom: 3px solid $accent;
 			}
-			button.remove {
-				background: white;
-				border: 1px solid $grey;
-				color: $grey;
+			button.quantity-adjuster {
+				border-color: rgb(206, 212, 218);
+				outline: none!important;
 				&:hover {
-					background: $red;
-					border-color: $red;
+					background-color: $accent;
+					border-color: $accent;
 					color: white;
 				}
+				&:active, &:focus {
+					outline: none!important;
+					box-shadow: none;
+				}
+			}
+			a.remove {
+				color: $grey;
+				&:hover {
+					color: $red;
+				}
+
 			}
 		}
 	}

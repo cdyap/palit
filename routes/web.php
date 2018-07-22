@@ -110,5 +110,5 @@ Route::get('/view-order', function () {
 
 //helper functions
 Route::patch('/removeFromCart/{slug}/{rowId}', 'OrdersController@removeFromCart');
-Route::patch('/changeQuantity/{slug}/{rowId}', 'OrdersController@changeQuantity');
+Route::patch('/changeQuantity/{company_id}/{rowId}', 'OrdersController@changeQuantity');
 

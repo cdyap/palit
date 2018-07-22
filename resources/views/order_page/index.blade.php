@@ -226,23 +226,43 @@
                                         <thead>
                                             <th>Product</th>
                                             <th class="text-right" >Price</th>
-                                            <th class="text-right">Quantity</th>
+                                            <th class="text-right" style="width:240px;">Quantity</th>
                                             <th class="text-right">Total</th>
-                                            <th style="width: 75px;"></th>
+                                            <th ></th>
                                         </thead>
                                         <tbody>
                                             @foreach($cart->where('name', 'Product') as $item)
-                                                
                                                 <tr class="cart-item {{$item->rowId}}">
-                                                    <td class="align-middle">{{$item->id->name}}<br><span class="text-grey">{{$item->options->description}}</span></td>
+                                                    <td class="align-middle">
+                                                        @if(session('invalid_cart_items'))
+                                                            @if(array_key_exists($item->rowId,session('invalid_cart_items')))
+                                                                @if(session('invalid_cart_items')[$item->rowId] == 0)
+                                                                    <b class="text-red">No stocks available</b><br>
+                                                                @elseif(session('invalid_cart_items')[$item->rowId] == 1)
+                                                                    <b class="text-red">Only 1 stock available</b><br>
+                                                                @elseif(session('invalid_cart_items')[$item->rowId] > 1)
+                                                                    <b class="text-red">Only {{session('invalid_cart_items')[$item->rowId]}} stocks available</b><br>
+                                                                @endif
+                                                            @endif
+                                                        @endif
+                                                        {{$item->id->name}}<br><span class="text-grey">{{$item->options->description}}</span>
+                                                    </td>
                                                     <td class="align-middle text-right">{{$item->options->currency . " " . number_format($item->price, 2, '.', ',')}}</td>
-                                                    @if(is_null($item->options->variant))
-                                                        <td class="text-right align-middle"><input type="number" style="width:100px;float:right;" name="quantity[{{$item->rowId}}]" class="item-quantity text-right form-control {{ $errors->has('price') ? 'has-error' : ''}}"  min="1" {{(!($item->id->overselling_allowed)) ? "max=".$item->id->available_inventory : ""}} value="{{$item->qty}}" required data-company="{{$company->slug}}" data-rowId="{{$item->rowId}}" ></td>
-                                                    @else
-                                                        <td class="text-right align-middle"><input type="number" style="width:100px;float:right;" name="quantity[{{$item->rowId}}]" class="item-quantity text-right form-control {{ $errors->has('price') ? 'has-error' : ''}}"  min="1" {{(!($item->id->overselling_allowed)) ? "max=".$item->options->variant->available_inventory : ""}} value="{{$item->qty}}" required data-company="{{$company->slug}}" data-rowId="{{$item->rowId}}" ></td>
-                                                    @endif
+                                                    <td class="text-right align-items-center align-middle">
+                                                        <div class="input-group align-middle align-items-center" style="padding-left:60px;">
+                                                            <div class="input-group-prepend align-items-center">
+                                                                <button class="btn btn-outline-secondary quantity-adjuster minus" type="button" style="border-radius: 0;"><a class="float-right hover-pointer"><i class="fas fa-minus"></i></a></button>
+                                                                <button class="btn btn-outline-secondary quantity-adjuster plus" type="button"><a class="float-right hover-pointer"><i class="fas fa-plus"></i></a></button>
+                                                            </div>
+                                                            @if(is_null($item->options->variant))
+                                                                <input type="number" name="quantity[{{$item->rowId}}]" class="item-quantity text-right align-items-center form-control {{ $errors->has('price') ? 'has-error' : ''}}"  min="1" {{(!($item->id->overselling_allowed)) ? "max=".$item->id->available_inventory : ""}} value="{{$item->qty}}" required data-company="{{$company->id}}" data-rowId="{{$item->rowId}}" >
+                                                            @else
+                                                                <input type="number" name="quantity[{{$item->rowId}}]" class="item-quantity text-right align-items-center form-control {{ $errors->has('price') ? 'has-error' : ''}}"  min="1" {{(!($item->id->overselling_allowed)) ? "max=".$item->options->variant->available_inventory : ""}} value="{{$item->qty}}" required data-company="{{$company->id}}" data-rowId="{{$item->rowId}}" >
+                                                            @endif
+                                                        </div>
+                                                    </td>
                                                     <td class="text-right align-middle item_price">{{$item->options->currency . " " . number_format($item->price*$item->qty, 2, '.', ',')}}</td>
-                                                    <td class="align-middle"><button type="button"  class="remove" data-rowId="{{$item->rowId}}" data-company="{{$company->slug}}">Remove</button></td>
+                                                    <td class="align-middle text-center"><a class="remove hover-pointer" data-rowId="{{$item->rowId}}" data-company="{{$company->slug}}"><i class="fas fa-times"></i></a></td>
                                                 </tr>
                                             @endforeach
 
@@ -250,7 +270,7 @@
                                                 <tr class="cart-item {{$item->rowId}}">
                                                     <td class="align-middle" colspan="3"><span class="note">SHIPPING:<br></span>{{$item->id->name}}<br><span class="text-grey">{{$item->id->description}}</span></td>
                                                     <td class="text-right align-middle item_price">{{$item->options->currency . " " . number_format($item->price*$item->qty, 2, '.', ',')}}</td>
-                                                    <td class="align-middle"><button type="button"  class="remove" data-rowId="{{$item->rowId}}" data-company="{{$company->slug}}">Remove</button></td>
+                                                    <td class="align-middle text-center"><a class="remove hover-pointer" data-rowId="{{$item->rowId}}" data-company="{{$company->slug}}"><i class="fas fa-times"></i></a></td>
                                                 </tr>
                                             @endforeach
                                             <tr>
@@ -269,8 +289,6 @@
                                 </form>
                             </div>
                         </div>
-                        
-                        
                     </div>
                 </div>
             </div>

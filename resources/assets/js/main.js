@@ -987,7 +987,7 @@ $('body.order_page').ready(function(){
 		$(this).removeClass('active');
 	});
 
-	$('body.order_page .cart-modal table.table').on('click', 'button.remove', function(){
+	$('body.order_page .cart-modal table.table').on('click', 'a.remove', function(){
 		removeFromCart($(this).data('company'), $(this).data('rowid'));
 	});
 
@@ -998,11 +998,61 @@ $('body.order_page').ready(function(){
 		}
 	});
 
+	var debounceChangeQuantity = function(object) {debounce(changeQuantity(object.data('company'), object.data('rowid'), object.val()), 1000, false)};
+
 	$('body.order_page .cart-modal table.table').on('change', '.item-quantity', function(){
-		changeQuantity($(this).data('company'), $(this).data('rowid'), $(this).val());
+		debounceChangeQuantity($(this));
 	});
 
-	$('div.catalogue table tbody tr').addClass('cursor-pointer');
+	$('body.order_page .cart-modal table.table').on('click', '.quantity-adjuster.plus', function(){
+		input = $(this).parent().next();
+		max = input.attr('max');
+
+		// For some browsers, `attr` is undefined; for others,
+		// `attr` is false.  Check for both.
+		if (typeof attr !== typeof undefined && attr !== false) {
+			new_val = +input.val() + 1;
+			input.val(new_val);
+		} else {
+			val = +input.val();
+			if(val + 1 <= max) {
+				new_val = +input.val() + 1;
+				input.val(new_val);
+			}
+		}
+		debounceChangeQuantity(input);
+	});
+
+	$('body.order_page .cart-modal table.table').on('click', '.quantity-adjuster.minus', function(){
+		input = $(this).parent().next();
+		val = +input.val();
+		if(val - 1 >= 1) {
+			new_val = +input.val() - 1;
+			input.val(new_val);
+		}
+		debounceChangeQuantity(input);
+	});
+
+	// Returns a function, that, as long as it continues to be invoked, will not
+	// be triggered. The function will be called after it stops being called for
+	// N milliseconds. If `immediate` is passed, trigger the function on the
+	// leading edge, instead of the trailing.
+	window.debounce = function (func, wait, immediate) {
+		var timeout;
+		return function() {
+			var context = this, args = arguments;
+			var later = function() {
+				timeout = null;
+				if (!immediate) func.apply(context, args);
+			};
+			var callNow = immediate && !timeout;
+			clearTimeout(timeout);
+			timeout = setTimeout(later, wait);
+			if (callNow) func.apply(context, args);
+		};
+	}
+
+	$('div.catalogue table tbody tr').addClass('hover-pointer');
 
 	$('.item-quantity').click(function(){
 		$(this).select();
@@ -1053,18 +1103,18 @@ $('body.order_page').ready(function(){
 		});
 	}
 
-	function changeQuantity(companySlug, rowId, quantity){
+	window.changeQuantity = function(companyId, rowId, quantity){
 
 		token = $('meta[name="csrf-token"]').attr('content');
 
 		var data_for_sending = {};
 		data_for_sending.rowId = rowId;
-		data_for_sending.slug = companySlug;
+		data_for_sending.slug = companyId;
 		data_for_sending.quantity = quantity;
 		data_for_sending._token = token;
 		// data_for_sending._method = "PATCH";
 		
-		url = "/changeQuantity/" + companySlug + "/" + rowId;
+		url = "/changeQuantity/" + companyId + "/" + rowId;
 
 		$.ajaxSetup({
 		    beforeSend: function(xhr, type) {
@@ -1085,7 +1135,10 @@ $('body.order_page').ready(function(){
 			    	$('.cart-item.'+a.rowId+' .item_price').text(a.item_price);
 			    	$('#cart_itemcount').text(a.cart_itemcount);
 			    	$('#cart_total').text(a.currency + " " + a.cart_total);
-			    } 
+			    } else {
+			    	$('.alerts-holder').prepend('<div class="alert alert-error alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>Error in updating cart item<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+					setTimeout(removeAddedAlerts, 5000);
+			    }
 		    }
 	  	});	
 	}

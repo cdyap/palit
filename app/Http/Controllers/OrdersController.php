@@ -223,6 +223,9 @@ class OrdersController extends Controller
             if(!empty($request->shipping_address_2)) {
                 $order->shipping_address_2 = $request->shipping_address_2;
             }
+            if(!empty($request->remarks)) {
+                $order->remarks = $request->remarks;
+            }
             $order->city = $request->city;
             $order->zip_code = $request->zip_code;
             $order->country = $request->country;
@@ -354,6 +357,19 @@ class OrdersController extends Controller
             $cart_itemcount = Cart::count();
             $cart_total = Cart::subtotal();
             $product_variant_columns = $company->settings->whereIn('name', preg_filter('/^/', 'variant_',$cart->pluck('options')->pluck('product')->pluck('id')->toArray()))->sortBy('value_2');
+            $invalid_cart_items = array();
+
+            //update associated objects and remove unavailable products/variants
+            if($cart_itemcount > 0) {
+                $product_ids = $cart->where('name', 'Product')->pluck('id.id', 'rowId');
+                $variant_ids = $cart->where('name', 'Product')->pluck('options.variant.id', 'rowId');
+
+                $invalid_cart_items_products = $product_ids->diff($products->pluck('id'));
+
+                $invalid_cart_items_variants = $variant_ids->diff($products->pluck('variants')->flatten()->where('is_available', true)->pluck('id'));
+
+                dd($invalid_cart_items_variants);
+            }
 
             return view('order_page.index',compact('company', 'cart', 'product_variant_columns', 'cart_itemcount', 'cart_total', 'products'));
         } catch (Exception $e) {
@@ -435,7 +451,7 @@ class OrdersController extends Controller
             Cart::remove($rowId);
 
             return response()->json([
-                'name' => $item->name,
+                'name' => $item->id->name,
                 'rowId' => $rowId,
                 'success' => true,
                 'cart_itemcount' => Cart::count(),
@@ -450,23 +466,37 @@ class OrdersController extends Controller
         }
     }
 
-    public function changeQuantity($slug, $rowId, Request $request){
+    public function changeQuantity($company_id, $rowId, Request $request){
         try {
             //parse JSON input
             $input = json_decode($request->getContent(), true);
 
-            $company = Company::where('slug', $slug)->firstOrFail();
-            $cart = Cart::instance($company->id)->content();
-            $item = Cart::update($rowId, $input['quantity']);
+            // $company = Company::where('slug', $slug)->firstOrFail();
+            $cart = Cart::instance($company_id)->content();
 
-            return response()->json([
-                'rowId' => $rowId,
-                'success' => true,
-                'item_price' => $item->options->currency . " " . number_format($item->price*$item->qty, 2, '.', ','),
-                'cart_itemcount' => Cart::count(),
-                'cart_total' => Cart::subtotal(),
-                'currency' => $company->currency
-            ]);
+            if($cart->count() > 0) {
+                $item = Cart::get($rowId);
+
+                if(collect($item)->count() > 0) {
+                    $item = Cart::update($rowId, $input['quantity']);    
+                    return response()->json([
+                        'rowId' => $rowId,
+                        'success' => true,
+                        'item_price' => $item->options->currency . " " . number_format($item->price*$item->qty, 2, '.', ','),
+                        'cart_itemcount' => Cart::count(),
+                        'cart_total' => Cart::subtotal(),
+                        'currency' => $item->options->currency
+                    ]);
+                } else {
+                    return response()->json([
+                        'success' => false,
+                    ]);
+                }
+            } else {
+                return response()->json([
+                    'success' => false,
+                ]);
+            }
         } catch (Exception $e) {
             return response()->json([
                 'success' => false,
@@ -490,8 +520,6 @@ class OrdersController extends Controller
             }
         }
 
-        $cart_itemcount = Cart::count();
-
         //remove existing shipping selected
         foreach($cart->where('name', 'Shipping') as $shipping) {
             Cart::remove($shipping->rowId);
@@ -499,16 +527,16 @@ class OrdersController extends Controller
 
         $cart_cost_without_shipping = Cart::subtotal(2,'.','');
 
-        //RETRIEVE CART ITEMS WITH QTYs > AVAILABLE INVENTORY
+        //RETRIEVE CART ITEMS !overselling_allowed WITH QTYs > AVAILABLE INVENTORY
         //get product and variant IDs and map to rowId
-        $products_of_cart = $cart->where('name', 'Product')->where('options.variant.id', null)->pluck('id.id', 'rowId');
-        $variants_of_cart = $cart->where('name', 'Product')->where('options.variant.id', '<>', null)->pluck('options.variant.id', 'rowId');
-    
+        $products_of_cart = $cart->where('name', 'Product')->where('options.variant.id', null)->where('id.overselling_allowed', false)->pluck('id.id', 'rowId');
+        $variants_of_cart = $cart->where('name', 'Product')->where('options.variant.id', '<>', null)->where('id.overselling_allowed', false)->pluck('options.variant.id', 'rowId');
+        
         $invalid_cart_items = array();
 
         //retrieve variant cart items with invalid QTYs
         if ($variants_of_cart->count() > 0) {
-            $variants = Variant::with(['delivered_variants', 'deliveredVariantQuantity', 'deliveredVariantInitial', 'fulfilledOrders'])->where('company_id', $company->id)->whereIn('id', $variants_of_cart)->get();
+            $variants = Variant::with(['delivered_variants', 'deliveredVariantQuantity', 'deliveredVariantInitial', 'fulfilledOrders'])->select('id', 'inventory', 'product_id')->where('company_id', $company->id)->whereIn('id', $variants_of_cart)->get();
 
             $existing_variant_quantity = $variants->pluck('available_inventory', 'id');
 
@@ -517,27 +545,34 @@ class OrdersController extends Controller
                 return $cart[$key]->qty > $existing_variant_quantity[$item];
             });
 
-            if($invalid_cart_items_variants->count() > 0)
-                foreach($invalid_cart_items_variants->keys() as $key) {
-                    $invalid_cart_items[] = $key;
+            if($invalid_cart_items_variants->count() > 0) {
+                foreach($invalid_cart_items_variants as $rowId => $variant_id) {
+                    $invalid_cart_items[$rowId] = $existing_variant_quantity->get($variant_id);
                 }
-
+            }
         }
 
         //retrieve product cart items with invalid QTYs
-        $products = Product::with(['delivered_products', 'variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'deliveredVariantInitial', 'fulfilledOrders'])->where('company_id', $company->id)->whereIn('id', $products_of_cart)->orderBy('name')->get();
-        
-        $existing_product_quantity = $products->pluck('available_inventory', 'id');
+        $products = Product::with(['delivered_products', 'variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'deliveredVariantInitial', 'fulfilledOrders'])->select('id', 'quantity', 'name', 'overselling_allowed', 'is_shipped')->where('company_id', $company->id)->whereIn('id', $products_of_cart)->orderBy('name')->get();
 
         //filter out cart items with ordered quantities greater than available inventory
-        $invalid_cart_items_products = $products_of_cart->filter(function ($item, $key) use ($cart, $existing_product_quantity) {
-            return $cart[$key]->qty > $existing_product_quantity[$item];
+        $invalid_cart_items_products = $products_of_cart->filter(function ($product_id, $rowId) use ($cart, $products) {
+            if($cart[$rowId]->qty > $products->find($product_id)->available_inventory)
+                return $product_id;
         });
 
         if($invalid_cart_items_products->count() > 0) {
-            foreach($invalid_cart_items_products->keys() as $key) {
-                $invalid_cart_items[] = $key;
+            foreach($invalid_cart_items_products as $rowId => $product_id) {
+                $invalid_cart_items[$rowId] = $products->find($product_id)->available_inventory;
             }
+        }
+
+        //if there are any invalid cart items, return to order page displaying errors
+        $invalid_cart_items_count = count($invalid_cart_items);
+        if($invalid_cart_items_count > 1) {
+            return back()->with(['error' => 'Sorry, we ran out of stocks for ' . $invalid_cart_items_count . ' items', 'invalid_cart_items' => $invalid_cart_items]);
+        } elseif ($invalid_cart_items_count == 1) {
+            return back()->with(['error' => 'Sorry, we ran out of stocks for ' . $invalid_cart_items_count . ' item', 'invalid_cart_items' => $invalid_cart_items]);
         }
 
         //COMPUTE FOR SHIPPING
@@ -582,7 +617,7 @@ class OrdersController extends Controller
             $selected_shipping_mode = null;
         }
     
-        return view('order_page.shipping',compact('company', 'cart', 'cart_itemcount', 'cart_total','shippings', 'selected_shipping_mode' ,'invalid_cart_items'));
+        return view('order_page.shipping',compact('company', 'cart', 'cart_total','shippings', 'selected_shipping_mode' ,'invalid_cart_items'));
     }
 
     public function checkout($slug, Request $request){
@@ -617,7 +652,7 @@ class OrdersController extends Controller
             $shipping->cart_cost = $shipping->total_cost;
             $shipping->quantity = 1;
 
-            Cart::add($shipping, "Shipping", 1, 0);
+            Cart::add($shipping, "Shipping", 1, 0, ['currency' => $company->currency]);
         }
         //if has request post data and if cart doesn't have any shipping item yet
         elseif($request->shipping) {

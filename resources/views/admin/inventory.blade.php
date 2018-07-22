@@ -75,7 +75,7 @@
 						</thead>
 						<tbody>
 							@foreach($products as $product)
-								<tr data-product="{{$product->id}}" data-toggle="modal" data-target="#productModal{{$product->slug}}">
+								<tr data-product="{{$product->id}}" data-toggle="modal" data-target="#productModal{{$product->slug}}" class="hover-pointer">
 									<td>{{$product->name}}</td>
 									<td class="text-right">{{$product->available_inventory}}</td>
 									<td class="text-right">{{$product->incoming_inventory}}</td>

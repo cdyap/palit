@@ -1,5 +1,10 @@
 @extends('layouts.order_page')
-
+@section('header')
+    <div class="header">
+        <h1 class="transition-instant">Checkout</h1>
+        <h5 class="text-grey">{{$company->name}}</h5>
+    </div>
+@endsection
 @section('content')
 	<div class="container checkout">
 		<div class="alerts-holder">
@@ -142,11 +147,20 @@
 							@endforeach
 						</div>
 					</div>
+					<div class="row">
+						<h4 class="with-underline text-bold" style="margin-top:40px">REMARKS</h4>
+					</div>
+					<div class="form-row">
+						<div class="form-group col-xs-12">
+							<label for="remarks">Enter any comments, special instructions, etc. you might want the vendor to know:</label>
+							<textarea name="remarks" class="form-control"></textarea>
+						</div>
+					</div>
 					<br>
 					<div class="form-row">
 						<div class="form-group col-xs-12">
 							<a href="/{{$company->slug}}/shipping" class="button ghost">< Select shipping method</a>
-							<button type="submit">Pay ></i></button>	
+							<button type="submit">Checkout ></button>	
 						</div>
 					</div>
 					
