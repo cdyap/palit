@@ -24,7 +24,7 @@ class ProductsController extends Controller
 
 	public function index(){
     	$sidebar = "Products";
-    	$title = "All products";
+    	$title = "Products";
     	$company = Auth::user()->company;
     	$products = Product::with('variants','variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'fulfilledOrders')->select('id', 'name', 'description', 'quantity', 'slug', 'is_shipped', 'is_available')->orderBy('name', 'asc')->where('company_id', $company->id)->get();
 
@@ -141,6 +141,7 @@ class ProductsController extends Controller
 	        'name' => 'required|unique:products,name,NULL,id,deleted_at,NULL',
 	        'description' => 'required',
 	        'price' => 'numeric|min:0',
+	        'item_per_shipment' => 'numeric|min:0',
 	        'quantity' => 'nullable|numeric|min:0'
 	    ]);
 

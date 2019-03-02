@@ -50,18 +50,24 @@ class OrdersController extends Controller
 
     public function delete($hash, Request $request){
         try {
-            $order = Order::with('order_items')->where('hash', $hash)->firstOrFail();
+            //match confirmation hash with order hash
+            if($hash == $request->hash) {
+                $order = Order::with('order_items')->where('hash', $hash)->firstOrFail();
 
-            //only delete unfulfilled / unpaid orders
-            if (empty($order->date_fulfilled)) {
-                $hash = $order->hash;
-                $order->order_items()->delete();
-                $order->delete();
+                //only delete unfulfilled / unpaid orders of your own company
+                if (empty($order->date_fulfilled) && $order->company_id == Auth::user()->company->id) {
+                    $hash = $order->hash;
+                    $order->order_items()->delete();
+                    $order->delete();
 
-                return back()->with(['success' => "Order ".$hash." deleted"]);
+                    return back()->with(['success' => "Order ".$hash." deleted"]);
+                } else {
+                    return back()->with(['error' => "Fulfilled orders may not be deleted"]);
+                }
             } else {
-                return back()->with(['error' => "Fulfilled orders may not be deleted"]);
+                return back()->with(['error' => "Order reference did not match"]);
             }
+            
         } catch (Exception $e) {
             return back()->with(['error' => "Order not found"]);
         }
@@ -210,6 +216,114 @@ class OrdersController extends Controller
                 'payment_method.required' => "Please select a payment method"
             ]);
 
+            //Filter out illegal order quantities
+        //RETRIEVE CART ITEMS !overselling_allowed WITH QTYs > AVAILABLE INVENTORY
+        //get product and variant IDs and map to rowId
+        $products_of_cart = $cart->where('name', 'Product')->where('options.variant.id', null)->where('id.overselling_allowed', false)->pluck('id.id', 'rowId');
+        $variants_of_cart = $cart->where('name', 'Product')->where('options.variant.id', '<>', null)->where('id.overselling_allowed', false)->pluck('options.variant.id', 'rowId');
+        
+        $invalid_cart_items = array();
+
+        //retrieve variant cart items with invalid QTYs
+        if ($variants_of_cart->count() > 0) {
+            $variants = Variant::with(['delivered_variants', 'deliveredVariantQuantity', 'deliveredVariantInitial', 'fulfilledOrders'])->select('id', 'inventory', 'product_id')->where('company_id', $company->id)->whereIn('id', $variants_of_cart)->get();
+
+            $existing_variant_quantity = $variants->pluck('available_inventory', 'id');
+
+            //filter out cart items with ordered quantities greater than available inventory
+            $invalid_cart_items_variants = $variants_of_cart->filter(function ($item, $key) use ($cart, $existing_variant_quantity) {
+                return $cart[$key]->qty > $existing_variant_quantity[$item];
+            });
+
+            if($invalid_cart_items_variants->count() > 0) {
+                foreach($invalid_cart_items_variants as $rowId => $variant_id) {
+                    $invalid_cart_items[$rowId] = $existing_variant_quantity->get($variant_id);
+                }
+            }
+        }
+
+        //retrieve product cart items with invalid QTYs
+        $products = Product::with(['delivered_products', 'variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'deliveredVariantInitial', 'fulfilledOrders'])->select('id', 'quantity', 'name', 'overselling_allowed', 'is_shipped')->where('company_id', $company->id)->whereIn('id', $products_of_cart)->orderBy('name')->get();
+
+        //filter out cart items with ordered quantities greater than available inventory
+        $invalid_cart_items_products = $products_of_cart->filter(function ($product_id, $rowId) use ($cart, $products) {
+            if($cart[$rowId]->qty > $products->find($product_id)->available_inventory)
+                return $product_id;
+        });
+
+        if($invalid_cart_items_products->count() > 0) {
+            foreach($invalid_cart_items_products as $rowId => $product_id) {
+                $invalid_cart_items[$rowId] = $products->find($product_id)->available_inventory;
+            }
+        }
+
+
+        //FILTER OUT UNAVAILABLE CART ITEMS AND SYNC OBJECTS
+        //get all products that are available and products with is_available variants
+        $products_cleanup = Product::with(['collections', 'variants', 'variants.delivered_variants', 'delivered_products', 'variants.deliveredVariantQuantity', 'variants.deliveredVariantInitial', 'variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'deliveredVariantInitial', 'variants.fulfilledOrders', 'fulfilledOrders', 'variants.pendingOrders'])
+                ->where(function($query) {
+                    $query->whereHas('variants', function ($query) {
+                        $query->where('is_available', true);
+                    })
+                    ->orWhereDoesntHave('variants')->orderBy('name');
+                })
+                ->where('company_id', $company->id)
+                ->where('is_available', true)->orderBy('name')->get();
+
+        //get products only where !overselling_allowed and available inventory > 0 OR overselling_allowed
+        $products_cleanup = collect($products_cleanup)->filter(function ($product, $key) {
+            if((!$product->overselling_allowed && $product->available_inventory > 0) || ($product->overselling_allowed)) {
+                return $product;
+            }
+        });
+
+        //get cart for this company
+        $cart_itemcount = Cart::count();
+        $cart_total = Cart::subtotal();
+        $product_variant_columns = $company->settings->whereIn('name', preg_filter('/^/', 'variant_',$cart->pluck('options')->pluck('product')->pluck('id')->toArray()))->sortBy('value_2');
+        $unavailable_cart_items = array();
+        $products_cleanup = $products_cleanup->mapWithKeys(function ($item) {
+            return [$item['id'] => $item];
+        });
+        
+        //update associated objects and remove unavailable products/variants for each cart item
+        if($cart_itemcount > 0) {
+            // rowId => id
+            $product_ids = $cart->where('name', 'Product')->pluck('id.id', 'rowId');
+            $variant_ids = $cart->where('name', 'Product')->where('options.variant.id', '<>', null)->pluck('options.variant.id', 'rowId');
+
+            $invalid_cart_items_products = $product_ids->diff($products_cleanup->pluck('id'));
+
+            $invalid_cart_items_variants = $variant_ids->diff($products_cleanup->pluck('variants')->flatten()->where('is_available', true)->pluck('id'));
+
+            //merge invalid cart items and variants. remove duplicates.
+            $unavailable_cart_items = array_unique(array_merge($invalid_cart_items_products->keys()->toArray(), $invalid_cart_items_variants->keys()->toArray()));
+
+            //iterate through product cart items that aren't in unavailable_cart_items and update associated objects
+            foreach($product_ids->except($unavailable_cart_items) as $rowId=>$product_id) {
+                $product = $products_cleanup->get($product_id);
+                if(!empty($product)) {
+                    //retrieve variant also if present
+                    if($variant_ids->has($rowId)) {
+                        $item = Cart::get($rowId);
+                        Cart::update($rowId, ['id' => $product, 'options' => ['variant' => $product->variants->where('id', $variant_ids->get($rowId))->first(), 'currency' => $item->options->currency, 'description' => $item->options->description]]);
+                    } else {
+                        Cart::update($rowId, ['id' => $product]);
+                    }
+                } else {
+                    $unavailable_cart_items[] = $rowId;
+                }
+            }
+        }
+
+        $country_codes = AppSettings::where('name', 'country_code')->get();
+
+        //if there are any invalid cart items OR unavailable products, return to order page displaying errors
+        $invalid_cart_items_count = count($invalid_cart_items);
+        if($invalid_cart_items_count > 0 || count($unavailable_cart_items) > 0) {
+            return back()->with(['invalid_cart_items' => $invalid_cart_items_count, 'unavailable_cart_items' => $unavailable_cart_items, 'error' => "Some of your cart items have issues"]);
+        }  else {
+
             $hashes = DB::table('orders')->select('hash')->get();
 
             //save order row
@@ -272,6 +386,7 @@ class OrdersController extends Controller
 
             // return redirect('/view-order')->with(['success' => "Order placed!", 'order' => $order]);
             return view('order_page.view_order')->with(['success' => "Order placed!", 'order' => $order, 'company' => $company]);
+        }
         } catch (Exception $e) {
 
         }        
@@ -337,18 +452,26 @@ class OrdersController extends Controller
 
 
     //order page orders
-    public function order_page($slug){
+    public function orders_index($slug){
         try {
             $company = Company::with('settings')->where('slug', $slug)->firstOrFail();
 
-            $products = Product::with(['collections', 'variants', 'variants.delivered_variants', 'delivered_products', 'variants.deliveredVariantQuantity', 'variants.deliveredVariantInitial', 'variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'deliveredVariantInitial', 'variants.fulfilledOrders', 'fulfilledOrders', 'variants.pendingOrders'])->where('company_id', $company->id)->where('is_available', true)->whereHas('variants', function ($query) {
-                    $query->where('is_available', true);
-                })->orWhereDoesntHave('variants')->orderBy('name')->get();
+            //get all products that are available and products with is_available variants
+            $products = Product::with(['collections', 'variants', 'variants.delivered_variants', 'delivered_products', 'variants.deliveredVariantQuantity', 'variants.deliveredVariantInitial', 'variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'deliveredVariantInitial', 'variants.fulfilledOrders', 'fulfilledOrders', 'variants.pendingOrders'])
+                ->where(function($query) {
+                    $query->whereHas('variants', function ($query) {
+                        $query->where('is_available', true);
+                    })
+                    ->orWhereDoesntHave('variants')->orderBy('name');
+                })
+                ->where('company_id', $company->id)
+                ->where('is_available', true)->orderBy('name')->get();
 
-            $products = collect($products)->filter(function ($value, $key) {
-                //remove products only where !overselling_allowed
-                if((!$value->overselling_allowed && $value->available_inventory > 0) || ($value->overselling_allowed)) {
-                    return $value;
+            // dd($products);
+            //get products only where !overselling_allowed and available inventory > 0 OR overselling_allowed
+            $products = collect($products)->filter(function ($product, $key) {
+                if((!$product->overselling_allowed && $product->available_inventory > 0) || ($product->overselling_allowed)) {
+                    return $product;
                 }
             });
 
@@ -357,21 +480,44 @@ class OrdersController extends Controller
             $cart_itemcount = Cart::count();
             $cart_total = Cart::subtotal();
             $product_variant_columns = $company->settings->whereIn('name', preg_filter('/^/', 'variant_',$cart->pluck('options')->pluck('product')->pluck('id')->toArray()))->sortBy('value_2');
-            $invalid_cart_items = array();
-
-            //update associated objects and remove unavailable products/variants
+            $unavailable_cart_items = array();
+            $products = $products->mapWithKeys(function ($item) {
+                return [$item['id'] => $item];
+            });
+            
+            //update associated objects and remove unavailable products/variants for each cart item
             if($cart_itemcount > 0) {
+                // rowId => id
                 $product_ids = $cart->where('name', 'Product')->pluck('id.id', 'rowId');
-                $variant_ids = $cart->where('name', 'Product')->pluck('options.variant.id', 'rowId');
+                $variant_ids = $cart->where('name', 'Product')->where('options.variant.id', '<>', null)->pluck('options.variant.id', 'rowId');
+
 
                 $invalid_cart_items_products = $product_ids->diff($products->pluck('id'));
 
                 $invalid_cart_items_variants = $variant_ids->diff($products->pluck('variants')->flatten()->where('is_available', true)->pluck('id'));
 
-                dd($invalid_cart_items_variants);
+                //merge invalid cart items and variants. remove duplicates.
+                $unavailable_cart_items = array_unique(array_merge($invalid_cart_items_products->keys()->toArray(), $invalid_cart_items_variants->keys()->toArray()));
+
+
+                //iterate through product cart items that aren't in unavailable_cart_items and update associated objects
+                foreach($product_ids->except($unavailable_cart_items) as $rowId=>$product_id) {
+                    $product = $products->get($product_id);
+                    if(!empty($product)) {
+                        //retrieve variant also if present
+                        if($variant_ids->has($rowId)) {
+                            $item = Cart::get($rowId);
+                            Cart::update($rowId, ['id' => $product, 'options' => ['variant' => $product->variants->where('id', $variant_ids->get($rowId))->first(), 'currency' => $item->options->currency, 'description' => $item->options->description]]);
+                        } else {
+                            Cart::update($rowId, ['id' => $product]);
+                        }
+                    } else {
+                        $unavailable_cart_items[] = $rowId;
+                    }
+                }
             }
 
-            return view('order_page.index',compact('company', 'cart', 'product_variant_columns', 'cart_itemcount', 'cart_total', 'products'));
+            return view('order_page.index',compact('company', 'cart', 'product_variant_columns', 'cart_itemcount', 'cart_total', 'products', 'unavailable_cart_items'));
         } catch (Exception $e) {
             return $e;
         }
@@ -527,6 +673,7 @@ class OrdersController extends Controller
 
         $cart_cost_without_shipping = Cart::subtotal(2,'.','');
 
+        //Filter out illegal order quantities from cart
         //RETRIEVE CART ITEMS !overselling_allowed WITH QTYs > AVAILABLE INVENTORY
         //get product and variant IDs and map to rowId
         $products_of_cart = $cart->where('name', 'Product')->where('options.variant.id', null)->where('id.overselling_allowed', false)->pluck('id.id', 'rowId');
@@ -567,13 +714,70 @@ class OrdersController extends Controller
             }
         }
 
-        //if there are any invalid cart items, return to order page displaying errors
-        $invalid_cart_items_count = count($invalid_cart_items);
-        if($invalid_cart_items_count > 1) {
-            return back()->with(['error' => 'Sorry, we ran out of stocks for ' . $invalid_cart_items_count . ' items', 'invalid_cart_items' => $invalid_cart_items]);
-        } elseif ($invalid_cart_items_count == 1) {
-            return back()->with(['error' => 'Sorry, we ran out of stocks for ' . $invalid_cart_items_count . ' item', 'invalid_cart_items' => $invalid_cart_items]);
+
+        //FILTER OUT UNAVAILABLE CART ITEMS AND SYNC OBJECTS
+        //get all products that are available and products with is_available variants
+        $products_cleanup = Product::with(['collections', 'variants', 'variants.delivered_variants', 'delivered_products', 'variants.deliveredVariantQuantity', 'variants.deliveredVariantInitial', 'variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'deliveredVariantInitial', 'variants.fulfilledOrders', 'fulfilledOrders', 'variants.pendingOrders'])
+                ->where(function($query) {
+                    $query->whereHas('variants', function ($query) {
+                        $query->where('is_available', true);
+                    })
+                    ->orWhereDoesntHave('variants')->orderBy('name');
+                })
+                ->where('company_id', $company->id)
+                ->where('is_available', true)->orderBy('name')->get();
+
+        //get products only where !overselling_allowed and available inventory > 0 OR overselling_allowed
+        $products_cleanup = collect($products_cleanup)->filter(function ($product, $key) {
+            if((!$product->overselling_allowed && $product->available_inventory > 0) || ($product->overselling_allowed)) {
+                return $product;
+            }
+        });
+
+        //get cart for this company
+        $cart_itemcount = Cart::count();
+        $cart_total = Cart::subtotal();
+        $product_variant_columns = $company->settings->whereIn('name', preg_filter('/^/', 'variant_',$cart->pluck('options')->pluck('product')->pluck('id')->toArray()))->sortBy('value_2');
+        $unavailable_cart_items = array();
+        $products_cleanup = $products_cleanup->mapWithKeys(function ($item) {
+            return [$item['id'] => $item];
+        });
+        
+        //update associated objects and remove unavailable products/variants for each cart item
+        if($cart_itemcount > 0) {
+            // rowId => id
+            $product_ids = $cart->where('name', 'Product')->pluck('id.id', 'rowId');
+            $variant_ids = $cart->where('name', 'Product')->where('options.variant.id', '<>', null)->pluck('options.variant.id', 'rowId');
+
+            $invalid_cart_items_products = $product_ids->diff($products_cleanup->pluck('id'));
+
+            $invalid_cart_items_variants = $variant_ids->diff($products_cleanup->pluck('variants')->flatten()->where('is_available', true)->pluck('id'));
+
+            //merge invalid cart items and variants. remove duplicates.
+            $unavailable_cart_items = array_unique(array_merge($invalid_cart_items_products->keys()->toArray(), $invalid_cart_items_variants->keys()->toArray()));
+
+            //iterate through product cart items that aren't in unavailable_cart_items and update associated objects
+            foreach($product_ids->except($unavailable_cart_items) as $rowId=>$product_id) {
+                $product = $products_cleanup->get($product_id);
+                if(!empty($product)) {
+                    //retrieve variant also if present
+                    if($variant_ids->has($rowId)) {
+                        $item = Cart::get($rowId);
+                        Cart::update($rowId, ['id' => $product, 'options' => ['variant' => $product->variants->where('id', $variant_ids->get($rowId))->first(), 'currency' => $item->options->currency, 'description' => $item->options->description]]);
+                    } else {
+                        Cart::update($rowId, ['id' => $product]);
+                    }
+                } else {
+                    $unavailable_cart_items[] = $rowId;
+                }
+            }
         }
+
+        //if there are any invalid cart items OR unavailable products, return to order page displaying errors
+        $invalid_cart_items_count = count($invalid_cart_items);
+        if($invalid_cart_items_count > 0 || count($unavailable_cart_items) > 0) {
+            return back()->with(['error' => 'Some of your cart items have issues', 'invalid_cart_items' => $invalid_cart_items, 'unavailable_cart_items' => $unavailable_cart_items]);
+        } 
 
         //COMPUTE FOR SHIPPING
         //if any of cart items requires shipping, compute for shipping
@@ -701,7 +905,119 @@ class OrdersController extends Controller
         $cart_itemcount = Cart::count();
         $cart_total = Cart::subtotal();
 
+        //Filter out illegal order quantities
+        //RETRIEVE CART ITEMS !overselling_allowed WITH QTYs > AVAILABLE INVENTORY
+        //get product and variant IDs and map to rowId
+        $products_of_cart = $cart->where('name', 'Product')->where('options.variant.id', null)->where('id.overselling_allowed', false)->pluck('id.id', 'rowId');
+        $variants_of_cart = $cart->where('name', 'Product')->where('options.variant.id', '<>', null)->where('id.overselling_allowed', false)->pluck('options.variant.id', 'rowId');
+        
+        $invalid_cart_items = array();
+
+        //retrieve variant cart items with invalid QTYs
+        if ($variants_of_cart->count() > 0) {
+            $variants = Variant::with(['delivered_variants', 'deliveredVariantQuantity', 'deliveredVariantInitial', 'fulfilledOrders'])->select('id', 'inventory', 'product_id')->where('company_id', $company->id)->whereIn('id', $variants_of_cart)->get();
+
+            $existing_variant_quantity = $variants->pluck('available_inventory', 'id');
+
+            //filter out cart items with ordered quantities greater than available inventory
+            $invalid_cart_items_variants = $variants_of_cart->filter(function ($item, $key) use ($cart, $existing_variant_quantity) {
+                return $cart[$key]->qty > $existing_variant_quantity[$item];
+            });
+
+            if($invalid_cart_items_variants->count() > 0) {
+                foreach($invalid_cart_items_variants as $rowId => $variant_id) {
+                    $invalid_cart_items[$rowId] = $existing_variant_quantity->get($variant_id);
+                }
+            }
+        }
+
+        //retrieve product cart items with invalid QTYs
+        $products = Product::with(['delivered_products', 'variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'deliveredVariantInitial', 'fulfilledOrders'])->select('id', 'quantity', 'name', 'overselling_allowed', 'is_shipped')->where('company_id', $company->id)->whereIn('id', $products_of_cart)->orderBy('name')->get();
+
+        //filter out cart items with ordered quantities greater than available inventory
+        $invalid_cart_items_products = $products_of_cart->filter(function ($product_id, $rowId) use ($cart, $products) {
+            if($cart[$rowId]->qty > $products->find($product_id)->available_inventory)
+                return $product_id;
+        });
+
+        if($invalid_cart_items_products->count() > 0) {
+            foreach($invalid_cart_items_products as $rowId => $product_id) {
+                $invalid_cart_items[$rowId] = $products->find($product_id)->available_inventory;
+            }
+        }
+
+
+        //FILTER OUT UNAVAILABLE CART ITEMS AND SYNC OBJECTS
+        //get all products that are available and products with is_available variants
+        $products_cleanup = Product::with(['collections', 'variants', 'variants.delivered_variants', 'delivered_products', 'variants.deliveredVariantQuantity', 'variants.deliveredVariantInitial', 'variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'deliveredVariantInitial', 'variants.fulfilledOrders', 'fulfilledOrders', 'variants.pendingOrders'])
+                ->where(function($query) {
+                    $query->whereHas('variants', function ($query) {
+                        $query->where('is_available', true);
+                    })
+                    ->orWhereDoesntHave('variants')->orderBy('name');
+                })
+                ->where('company_id', $company->id)
+                ->where('is_available', true)->orderBy('name')->get();
+
+        //get products only where !overselling_allowed and available inventory > 0 OR overselling_allowed
+        $products_cleanup = collect($products_cleanup)->filter(function ($product, $key) {
+            if((!$product->overselling_allowed && $product->available_inventory > 0) || ($product->overselling_allowed)) {
+                return $product;
+            }
+        });
+
+        //get cart for this company
+        $cart_itemcount = Cart::count();
+        $cart_total = Cart::subtotal();
+        $product_variant_columns = $company->settings->whereIn('name', preg_filter('/^/', 'variant_',$cart->pluck('options')->pluck('product')->pluck('id')->toArray()))->sortBy('value_2');
+        $unavailable_cart_items = array();
+        $products_cleanup = $products_cleanup->mapWithKeys(function ($item) {
+            return [$item['id'] => $item];
+        });
+        
+        //update associated objects and remove unavailable products/variants for each cart item
+        if($cart_itemcount > 0) {
+            // rowId => id
+            $product_ids = $cart->where('name', 'Product')->pluck('id.id', 'rowId');
+            $variant_ids = $cart->where('name', 'Product')->where('options.variant.id', '<>', null)->pluck('options.variant.id', 'rowId');
+
+            $invalid_cart_items_products = $product_ids->diff($products_cleanup->pluck('id'));
+
+            $invalid_cart_items_variants = $variant_ids->diff($products_cleanup->pluck('variants')->flatten()->where('is_available', true)->pluck('id'));
+
+            //merge invalid cart items and variants. remove duplicates.
+            $unavailable_cart_items = array_unique(array_merge($invalid_cart_items_products->keys()->toArray(), $invalid_cart_items_variants->keys()->toArray()));
+
+            //iterate through product cart items that aren't in unavailable_cart_items and update associated objects
+            foreach($product_ids->except($unavailable_cart_items) as $rowId=>$product_id) {
+                $product = $products_cleanup->get($product_id);
+                if(!empty($product)) {
+                    //retrieve variant also if present
+                    if($variant_ids->has($rowId)) {
+                        $item = Cart::get($rowId);
+                        Cart::update($rowId, ['id' => $product, 'options' => ['variant' => $product->variants->where('id', $variant_ids->get($rowId))->first(), 'currency' => $item->options->currency, 'description' => $item->options->description]]);
+                    } else {
+                        Cart::update($rowId, ['id' => $product]);
+                    }
+                } else {
+                    $unavailable_cart_items[] = $rowId;
+                }
+            }
+        }
+
         $country_codes = AppSettings::where('name', 'country_code')->get();
+
+        //if there are any invalid cart items OR unavailable products, return to order page displaying errors
+        $invalid_cart_items_count = count($invalid_cart_items);
+        if($invalid_cart_items_count > 0 || count($unavailable_cart_items) > 0) {
+            $error = "Some of your cart items have issues";
+            \Session::flash('invalid_cart_items', $invalid_cart_items_count);
+            \Session::flash('unavailable_cart_items', $unavailable_cart_items);
+            \Session::flash('error', 'Some of your cart items have issues');
+            
+            \Session::flash('error', 'Some of your cart items have issues');
+            return view('order_page.checkout',compact('company', 'cart', 'cart_itemcount', 'cart_total', 'shipping_mode', 'countries', 'payment_methods', 'country_codes', 'invalid_cart_items', 'unavailable_cart_items'));
+        } 
         
         return view('order_page.checkout',compact('company', 'cart', 'cart_itemcount', 'cart_total', 'shipping_mode', 'countries', 'payment_methods', 'country_codes'));
     }

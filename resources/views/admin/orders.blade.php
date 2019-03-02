@@ -34,7 +34,7 @@
 			</thead>
 			<tbody>
 				@foreach($orders as $order) 
-					<tr data-order="{{$order->hash}}" data-toggle="modal" data-target="#orderModal{{$order->hash}}">
+					<tr data-order="{{$order->hash}}" data-toggle="modal" data-target="#orderModal{{$order->hash}}" class="hover-pointer">
 						<td>{{$order->hash}}</td>
 						<td>{{$order->first_name . " " . $order->last_name}}</td>
 						<td>{{$order->shipping_address_1 . $order->shipping_address_2}}</td>
@@ -97,14 +97,19 @@
 								</div>
 								@if(empty($order->date_paid) && !$order->trashed())
 									<br><br>								
-									<form action="/orders/{{$order->hash}}/confirm" method="POST" class="float-left" style="display:inline-block">
+									<form action="/orders/{{$order->hash}}/confirm" method="POST" >
 										<input type="hidden" name="_token" value="{{ csrf_token() }}">
 										<button type="submit">Confirm payment</button>
 									</form>
-									<form action="/orders/{{$order->hash}}/delete" method="POST" class="float-left" style="display:inline-block">
+									<br><br>
+									<form action="/orders/{{$order->hash}}/delete" method="POST" class="delete-order-form">
 										<input type="hidden" name="_token" value="{{ csrf_token() }}">
 										<input type="hidden" name="_method" value="delete" />
-										<button type="submit" class="button ghost hover-red">Cancel order</button>
+										<div class="form-group">
+											<label for="name">To cancel this order, enter the order reference</label>
+											<input type="text" name="hash" class="form-control {{ $errors->has('hash') ? 'has-error' : ''}}" required value="{{ old('hash') }}" style="width:120px">
+										</div>
+										<button class="ghost button hover-red delete-order-button">Cancel order</button>
 									</form>
 								@elseif(!empty($order->date_paid) && empty($order->date_fulfilled) && !$order->trashed())
 									<p class="caption">Payment received:</p>

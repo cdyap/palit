@@ -177,7 +177,24 @@
                     <tbody>
                         @foreach($cart->where('name', 'Product') as $item)
                             <tr>
-                                <td class="align-middle">{{$item->id->name}}<br><span class="text-grey">{{$item->options->description}}</span></td>
+                                <td class="align-middle">
+                                	@if(session('invalid_cart_items'))
+                                        @if(array_key_exists($item->rowId,session('invalid_cart_items')))
+                                            @if(session('invalid_cart_items')[$item->rowId] == 0)
+                                                <b class="text-red">No stocks available</b><br>
+                                            @elseif(session('invalid_cart_items')[$item->rowId] == 1)
+                                                <b class="text-red">Only 1 stock available</b><br>
+                                            @elseif(session('invalid_cart_items')[$item->rowId] > 1)
+                                                <b class="text-red">Only {{session('invalid_cart_items')[$item->rowId]}} stocks available</b><br>
+                                            @endif
+                                        @endif
+                                    @endif
+                                    @if(session('unavailable_cart_items')) 
+                                        @if(in_array($item->rowId,session('unavailable_cart_items')))
+                                            <b class="text-red">Product unavailable</b><br>
+                                        @endif
+                                    @endif
+                                    {{$item->id->name}}<br><span class="text-grey">{{$item->options->description}}</span></td>
                                 <td class="text-right align-middle">{{$item->qty}}</td>
                                 <td class="text-right align-middle">{{$item->options->currency . " " . number_format($item->subtotal, 2, '.', ',')}}</td>
                             </tr>

@@ -83,11 +83,12 @@ class InventoryController extends Controller
         //
         $sidebar = "Inventory";
         $company = Auth::user()->company;
-        $title = "Add delivery";
-        $products = Product::where('company_id', $company->id)->orderBy('name')->get();
+        $title = "Add stocks";
+        $products_with_variants = Product::with(['variants.delivered_variants', 'delivered_products', 'variants.deliveredVariantQuantity', 'variants.deliveredVariantInitial', 'variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'deliveredVariantInitial', 'deliveredProductInitial' ,'variants.fulfilledOrders', 'fulfilledOrders'])->has('variants')->where('company_id', $company->id)->orderBy('name')->get();
+        $products_wo_variants = Product::with(['variants.delivered_variants', 'delivered_products', 'variants.deliveredVariantQuantity', 'variants.deliveredVariantInitial', 'variantQuantity', 'deliveredVariantQuantity', 'deliveredProductQuantity', 'deliveredVariantInitial', 'deliveredProductInitial' ,'variants.fulfilledOrders', 'fulfilledOrders'])->doesntHave('variants')->where('company_id', $company->id)->orderBy('name')->get();
 
         //get all variant columns of all products where name is in all plucked product IDs prefixed with 'variant_'
-        $product_variant_columns = Setting::where('company_id', Auth::user()->company->id)->whereIn('name', preg_filter('/^/', 'variant_', $products->pluck('id')->toArray()))->orderBy('value_2')->get();
+        $product_variant_columns = Setting::where('company_id', Auth::user()->company->id)->whereIn('name', preg_filter('/^/', 'variant_', $products_with_variants->pluck('id')->toArray()))->orderBy('value_2')->get();
 
         $product_ids_with_variant_columns = $product_variant_columns->unique('name')->pluck('name')->map(function ($item, $key) {
             return substr($item,8);
@@ -95,9 +96,31 @@ class InventoryController extends Controller
 
         $products_with_problems = Product::doesntHave('variants')->whereIn('id', $product_ids_with_variant_columns)->orderBy('name')->get();
 
-        $products = $products->whereNotIn('id', $products_with_problems->pluck('id'));
+        $unpaid_orders = DB::table('order_items')
+                                ->whereIn('order_id', function($query) use ($company)
+                                {
+                                    $query->select(DB::raw("id"))
+                                          ->from('orders')
+                                          ->whereRaw('date_paid IS NULL')
+                                          ->where('company_id', $company->id)
+                                          ->whereRaw('deleted_at IS NULL')
+                                          ->whereRaw('date_fulfilled IS NULL');
+                                })
+                                ->get();
 
-        return view('admin.inventory_new',compact('sidebar', 'products', 'title', 'delivery'));
+        $paid_orders = DB::table('order_items')
+                                ->whereIn('order_id', function($query) use ($company)
+                                {
+                                    $query->select(DB::raw("id"))
+                                          ->from('orders')
+                                          ->whereRaw('date_paid IS NOT NULL')
+                                          ->where('company_id', $company->id)
+                                          ->whereRaw('deleted_at IS NULL')
+                                          ->whereRaw('date_fulfilled IS NULL');
+                                })
+                                ->get();
+
+        return view('admin.inventory_new',compact('sidebar', 'products_with_variants', 'products_wo_variants', 'title', 'delivery', 'paid_orders', 'unpaid_orders', 'product_variant_columns'));
     }
 
     public function getProduct(Request $request){
@@ -142,43 +165,87 @@ class InventoryController extends Controller
         ]);
 
         try {
-            $delivery = new Delivery;
-            $delivery->supplier = $request->supplier;
-            $delivery->expected_arrival = $request->expected_arrival;
-            $delivery->is_received = false;
-            $delivery->company_id = Auth::user()->company->id;
-            $delivery->save();
+            //filter out empty / 0 stocks entered in input fields
+            $filtered_variants = collect($request->variant)->filter(function ($value, $key) {
+                return $value > 0;
+            });
+            $filtered_products = collect($request->product)->filter(function ($value, $key) {
+                return $value > 0;
+            });
 
-            if (!empty($request->variant)) {
-                foreach($request->variant as $key => $value) {
-                    $variant = Variant::with('product')->findOrFail($key);
+            //error boolean check
+            $errors_invalid_variants = false;
+            $errors_invalid_products = false;
 
-                    $delivered_variant = new DeliveredVariant;
-                    $delivered_variant->quantity = $value;
-                    $delivered_variant->variant_id = $variant->id;
-                    $delivered_variant->product_id = $variant->product->id;
-                    // dd($delivered_variant);
-                    $delivery->delivered_variants()->save($delivered_variant);
+            if (!empty($filtered_variants)) {
+                $variants = Variant::whereIn('id',$filtered_variants->keys())->where('company_id', Auth::user()->company->id)->select('id', 'product_id')->get();
+                
+                //if variants from query == request->variants, run next loop, else declare error variable as true.
+                if($variants->count() != $filtered_variants->count()) {
+                    $errors_invalid_variants = true;
                 }
             }
 
-            if (!empty($request->product)) {
-                foreach($request->product as $key => $value) {
-                    $product = Product::findOrFail($key);
-                    $delivered_product = new DeliveredProduct;
-                    $delivered_product->quantity = $value;
-                    $delivered_product->product_id = $product->id;
-                    // dd($delivered_variant);
-                    $delivery->delivered_products()->save($delivered_product);
+            if (!empty($filtered_products)) {
+                $products = Product::whereIn('id',$filtered_products->keys())->where('company_id', Auth::user()->company->id)->select('id')->get();
+                
+                //if products from query == request->products, run next loop, else declare error variable as true.
+                if($products->count() != $filtered_products->count()) {
+                    $errors_invalid_variants = true;
                 }
+            }
+
+
+            if(!$errors_invalid_variants && !$errors_invalid_products) {
+                $delivery = new Delivery;
+                $delivery->supplier = $request->supplier;
+                $delivery->expected_arrival = $request->expected_arrival;
+                $delivery->is_received = false;
+                $delivery->company_id = Auth::user()->company->id;
+                $delivery->save();
+
+                if($filtered_variants->count() > 0) {
+                    foreach($filtered_variants as $key => $value) {
+                        $variant = $variants->firstWhere('id', $key);
+
+                        if(!empty($variant)) {
+                            $delivered_variant = new DeliveredVariant;
+                            $delivered_variant->quantity = $value;
+                            $delivered_variant->variant_id = $variant->id;
+                            $delivered_variant->product_id = $variant->product->id;
+
+                            $delivery->delivered_variants()->save($delivered_variant);
+                        } else {
+                            $errors_invalid_variants = $errors_invalid_variants + 1;
+                        }         
+                    }
+                }
+
+                if($filtered_products->count() > 0) {
+                    foreach($filtered_products as $key => $value) {
+                        $product = $products->firstWhere('id', $key);
+
+                        if(!empty($variant)) {
+                            $delivered_product = new DeliveredProduct;
+                            $delivered_product->quantity = $value;
+                            $delivered_product->product_id = $product->id;
+
+                            $delivery->delivered_products()->save($delivered_product);
+                        } else {
+                            $errors_invalid_products = $errors_invalid_products + 1;
+                        }
+                    }
+                }
+
+                return redirect('/inventory')->with(['success' => "Stocks added"]);
+            } else {
+                return back()->with(['error' => "Products/variants entered for restocking are not yours"]);
             }
         } catch (Exception $e) {
             return back()->with(['error' => "Delivery added!"])
                     ->withInput($request->input());
         }
-        
-        
-        return redirect('/inventory')->with(['success' => "Delivery added!"]);
+               
     }
 
     /**
@@ -224,12 +291,17 @@ class InventoryController extends Controller
     public function destroy($id)
     {
         //
-        $delivery = Delivery::with('delivered_products', 'delivered_variants')->findOrFail($id);
-        $delivery->delivered_variants()->delete();
-        $delivery->delivered_products()->delete();
-        $delivery->delete();
+        try {
+            $delivery = Delivery::with('delivered_products', 'delivered_variants')->where('id', $id)->where('company_id', Auth::user()->company->id)->firstOrFail();
+            $delivery->delivered_variants()->delete();
+            $delivery->delivered_products()->delete();
+            $delivery->delete();
 
-        return redirect('/inventory')->with(['success' => "Delivery from ".$delivery->supplier." deleted!"]);
+            return redirect('/inventory')->with(['success' => "Delivery from ".$delivery->supplier." deleted"]);
+        } catch (Exception $e) {
+            return back()->with(['error' => "Something went wrong"]);
+        }
+        
     }
 
     public function view_delivery($delivery_slug){

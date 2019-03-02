@@ -57,6 +57,10 @@ div.block h4:not(.no-underline):before {
   border-bottom: 3px solid #841257;
 }
 
+div.block:first-of-type {
+  margin-top: 0;
+}
+
 .pagination {
   -webkit-box-pack: center !important;
   justify-content: center !important;
@@ -85,12 +89,109 @@ div.block h4:not(.no-underline):before {
   color: white !important;
 }
 
+.sticky-wrap {
+  overflow-x: auto;
+  position: relative;
+  margin-bottom: 1.5em;
+  width: 100%;
+}
+
+.sticky-wrap .sticky-thead,
+.sticky-wrap .sticky-col,
+.sticky-wrap .sticky-intersect {
+  opacity: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  transition: all .125s ease-in-out;
+  z-index: 50;
+  width: auto;
+  /* Prevent table from stretching to full size */
+}
+
+.sticky-wrap .sticky-thead {
+  box-shadow: 0 0.25em 0.1em -0.1em rgba(0, 0, 0, 0.125);
+  z-index: 100;
+  width: 100%;
+  /* Force stretch */
+}
+
+.sticky-wrap .sticky-thead thead {
+  background: white;
+}
+
+.sticky-wrap .sticky-thead thead th {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.sticky-wrap .sticky-thead thead i.fa-sort-up, .sticky-wrap .sticky-thead thead i.fa-sort-down {
+  display: none;
+}
+
+.sticky-wrap .sticky-thead thead:hover {
+  cursor: pointer;
+}
+
+.sticky-wrap .sticky-intersect {
+  opacity: 1;
+  z-index: 150;
+}
+
+.sticky-wrap .sticky-intersect th {
+  background-color: #666;
+  color: #eee;
+}
+
+.sticky-wrap td,
+.sticky-wrap th {
+  box-sizing: border-box;
+}
+
 table.table {
   margin-bottom: 0;
 }
 
-table.table th {
+table.table thead th.headerSortUp i.fa-sort-down, table.table thead th.headerSortDown i.fa-sort-up {
+  display: inline-block;
+}
+
+table.table thead th.headerSortUp i.fa-sort, table.table thead th.headerSortDown i.fa-sort {
+  display: none;
+}
+
+table.table thead th {
   border-top: none;
+}
+
+table.table thead th i.fa-sort-up, table.table thead th i.fa-sort-down {
+  display: none;
+}
+
+table.table thead th:hover {
+  cursor: pointer;
+}
+
+table.table tbody td {
+  vertical-align: middle !important;
+}
+
+table.header-scrolled {
+  width: 100%;
+}
+
+table.header-scrolled thead {
+  background: white;
+  position: fixed;
+  top: 0;
+}
+
+table.sticky-thead i.fas {
+  display: none;
+}
+
+table.sticky-thead thead:hover {
+  cursor: auto;
 }
 
 table.settings-table tr a {
@@ -107,6 +208,14 @@ table.settings-table tr:hover {
 
 .table-hover tbody tr:hover {
   background-color: rgba(0, 0, 0, 0.05);
+}
+
+table th.width-120 {
+  width: 120px !important;
+}
+
+table th.width-150 {
+  width: 120px !important;
 }
 
 .variants-to-add table tbody tr td {
@@ -262,7 +371,7 @@ div.empty-state svg {
 
 .item .badge, .nav-item .badge {
   position: absolute;
-  margin-left: 48px;
+  margin-left: 25px;
   background: #841257;
   color: white;
   margin-top: -3px;
@@ -489,7 +598,8 @@ a.button, input.button, button, .modal button[type="submit"] {
   letter-spacing: 1px;
   transition: 0.2s ease-in;
   outline: none;
-  border-style: none;
+  border-radius: 0;
+  border: 1px solid #841257;
 }
 
 a.button:hover, input.button:hover, button:hover, .modal button[type="submit"]:hover {
@@ -498,9 +608,8 @@ a.button:hover, input.button:hover, button:hover, .modal button[type="submit"]:h
   cursor: pointer;
 }
 
-a.button, button.ghost {
-  padding-top: 9.5px;
-  padding-bottom: 9.5px;
+a.button:active, input.button:active, button:active, .modal button[type="submit"]:active {
+  outline: none;
 }
 
 button:focus, a:focus {
@@ -522,6 +631,7 @@ button:disabled:hover, button.disabled:hover {
 
 a.button.secondary, button.button.secondary {
   background: #7F7F7F;
+  border-color: #7F7F7F;
 }
 
 a.button.error {
@@ -545,31 +655,36 @@ a.close.delete-variant.highlight {
   background-color: #F22613 !important;
   color: white !important;
   cursor: pointer;
+  border-color: #F22613 !important;
 }
 
-button.button.ghost, a.ghost {
+.ghost.hover-red:hover {
+  background: #F22613 !important;
+  border: 1px solid #F22613 !important;
+  color: white !important;
+}
+
+button.ghost, a.ghost {
   box-shadow: none;
-  background: white;
+  background: #F8F9FA;
   border: 1px solid #7F7F7F;
+  padding: 8px 16px;
   color: #7F7F7F;
+  border-radius: 0;
+  margin-top: -3px;
 }
 
-button.button.ghost.active, a.ghost.active {
+button.ghost.active, a.ghost.active {
   color: #841257;
   border-color: #841257;
+  outline: none;
 }
 
-button.button.ghost:hover, a.ghost:hover {
+button.ghost:hover:not(.hover-red), a.ghost:hover:not(.hover-red) {
   box-shadow: none;
   cursor: pointer;
   color: #841257;
   border-color: #841257;
-}
-
-.ghost.hover-red:hover {
-  background: #F22613;
-  color: white;
-  border-color: #F22613;
 }
 
 tr .button {
@@ -613,7 +728,7 @@ tr.active {
   background: #ECECEC;
 }
 
-.transition-instant, div.block {
+.transition-instant, div.block, .admin .sidebar a p, .admin .sidebar .item:not(.logo), .admin .sidebar .item:not(.logo) i, .admin .sidebar .item:not(.logo) p {
   transition: All 0.2s ease-in-out;
   -webkit-transition: All 0.2s ease-in-out;
   -moz-transition: All 0.2s ease-in-out;
@@ -638,15 +753,15 @@ tr.active {
   box-shadow: none !important;
 }
 
-.z-depth-1, div.block, .list-group-item:last-child:hover, .list-group-item:first-child:hover, .list-group-item:hover {
-  box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 3px 1px -2px rgba(0, 0, 0, 0.12), 0 1px 5px 0 rgba(0, 0, 0, 0.2);
+.z-depth-1, div.block, .list-group-item:last-child:hover, .list-group-item:first-child:hover, .list-group-item:hover, button.ghost:hover:not(.hover-red), a.ghost:hover:not(.hover-red), .admin .sidebar .item:not(.logo):not(.active):hover {
+  box-shadow: 4px 4px 15px 0px rgba(0, 0, 0, 0.16);
 }
 
-.z-depth-1-half, .dropdown-menu {
-  box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+.z-depth-1-half, .dropdown-menu, .admin .sidebar .active {
+  box-shadow: 7px 7px 22px 0px rgba(0, 0, 0, 0.16);
 }
 
-.z-depth-2, a.button:hover, input.button:hover, button:hover, .modal button[type="submit"]:hover, body.order_page div.body .card:hover, body.order_page .view-cart, body.order_page .shipping .shipping-method > input + div.block:hover, body.order_page .shipping .payment-method > input + div.block:hover, body.order_page .checkout .shipping-method > input + div.block:hover, body.order_page .checkout .payment-method > input + div.block:hover {
+.z-depth-2, a.button:hover, input.button:hover, button:hover, .modal button[type="submit"]:hover, .ghost.hover-red:hover, body.order_page div.body .card:hover, body.order_page .view-cart, body.order_page .shipping .shipping-method > input + div.block:hover, body.order_page .shipping .payment-method > input + div.block:hover, body.order_page .checkout .shipping-method > input + div.block:hover, body.order_page .checkout .payment-method > input + div.block:hover {
   box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
 }
 
@@ -688,13 +803,36 @@ tr.active {
 }
 
 .admin .sidebar {
-  width: 80px;
-  padding-top: 0px;
-  background-color: #20384D;
+  width: 100px;
+  padding-top: 20px;
+  padding-left: 10px;
+  padding-right: 10px;
   height: 100vh;
   position: fixed;
   top: 0;
   z-index: 1;
+}
+
+.admin .sidebar .active {
+  background: #1c1c1c;
+}
+
+.admin .sidebar .active p {
+  display: none;
+}
+
+.admin .sidebar .active i {
+  color: white !important;
+  font-size: 2em !important;
+  margin-bottom: 0 !important;
+}
+
+.admin .sidebar .active span.badge {
+  margin-left: 20px !important;
+}
+
+.admin .sidebar .active:hover {
+  cursor: pointer;
 }
 
 .admin .sidebar a p {
@@ -712,9 +850,10 @@ tr.active {
 }
 
 .admin .sidebar .item:not(.logo) {
-  width: 100%;
+  width: 80px;
   height: 80px;
-  padding-top: 10px;
+  border-radius: 12px;
+  margin-bottom: 20px;
 }
 
 .admin .sidebar .item:not(.logo) i {
@@ -723,31 +862,26 @@ tr.active {
   color: #7F7F7F;
 }
 
-.admin .sidebar .item:not(.logo):hover {
+.admin .sidebar .item:not(.logo):not(.active):hover {
   cursor: pointer;
+  background: white;
 }
 
-.admin .sidebar .item:not(.logo):hover i {
-  color: white !important;
+.admin .sidebar .item:not(.logo):not(.active):hover i {
+  color: #1c1c1c;
 }
 
-.admin .sidebar .item:not(.logo):hover a p {
+.admin .sidebar .item:not(.logo):not(.active):hover a p {
   text-decoration: none;
-  color: white;
+  color: #1c1c1c;
 }
 
 .admin .sidebar .logo {
   padding: 2px;
 }
 
-.admin .sidebar .active p {
-  font-weight: 700;
-  letter-spacing: 0.7px;
-  color: white;
-}
-
-.admin .sidebar .active i {
-  color: white !important;
+.admin .sidebar p {
+  margin: 0;
 }
 
 .admin .navbar .nav-item:not(.logo):not(.dropdown) {
@@ -779,31 +913,52 @@ tr.active {
 }
 
 .admin .content {
-  padding-left: 80px;
+  padding-left: 100px;
   width: 100%;
-  padding-top: 56px;
+  padding-top: 30px;
   padding-bottom: 100px;
 }
 
 .admin .content .page-header {
-  position: relative;
-  background: white;
-  padding-left: 30px;
+  padding-left: 10px;
   z-index: 3;
   padding-bottom: 20px;
 }
 
 @media screen and (max-width: 767px) {
-  .admin .navbar, .admin .content .page-header, .admin .navbar a {
-    background: #20384D !important;
-    color: white !important;
+  .admin .sidebar {
+    width: 100%;
+    height: 80px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    position: relative;
+  }
+  .admin .sidebar p {
+    font-size: 0.75em !important;
+  }
+  .admin .sidebar i {
+    font-size: 1.5em !important;
+  }
+  .admin .sidebar .item {
+    float: left;
+    width: 80px !important;
+    height: 60px !important;
+    margin-bottom: 0 !important;
+    margin-right: 10px !important;
   }
   .admin .content {
+    padding-top: 30px;
     padding-left: 0;
   }
   .admin .navbar {
     margin-left: 0;
     padding-left: 0;
+  }
+}
+
+@media screen and (max-width: 469px) {
+  .admin .content {
+    padding-top: 70px;
   }
 }
 

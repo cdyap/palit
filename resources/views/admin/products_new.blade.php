@@ -1,8 +1,8 @@
 @extends('layouts.admin')
 
 @section('content')
-	<br>
-	<h5><a href="/products">< All products</a></h5>
+	<a href="/products" class="btn ghost"><i class="fas fa-chevron-left"></i> Cancel</a>
+	<br><br>
 	<div class="row">
 		<div class="col-lg-8">
 			<form action="/products/save" method="POST" class="with-cascading-disabling">
@@ -17,21 +17,21 @@
 					@endif
 					<input type="hidden" name="_token" value="{{ csrf_token() }}">
 					<div class="form-group">
-						<label for="name">Name:*</label>
+						<label for="name">Name:</label>
 						<input type="text" name="name" class="form-control {{ $errors->has('name') ? 'has-error' : ''}}" required value="{{ old('name') }}">
 					</div>
 					<div class="form-group">
-						<label for="description">Description:*</label>
+						<label for="description">Description:</label>
 						<textarea name="description" required class="form-control {{ $errors->has('description') ? 'has-error' : ''}}" rows="4">{{ old('description') }}</textarea>
 					</div>
 					<div class="form-group">
-						<label for="description">SKU:</label>
+						<label for="description">SKU:*</label>
 						<input type="text" name="SKU" class="form-control {{ $errors->has('SKU') ? 'has-error' : ''}}" value="{{ old('SKU') }}">
 					</div>
-					<p class="note" style="margin-bottom:0;margin-top:10px;">* Required field</p>			
+					<p class="note" style="margin-bottom:0;margin-top:10px;">* Optional field</p>			
 				</div>
 				<div class="block">
-					<h4>Pricing:*</h4>
+					<h4>Pricing:</h4>
 					<div class="form-row">
 						<div class="form-group col-sm-12">
 							<div class="input-group">
@@ -41,7 +41,6 @@
 								<input type="number" name="price" class="form-control {{ $errors->has('price') ? 'has-error' : ''}}"  min="0", value="{{ old('price') }}" required>
 							</div>
 						</div>
-						<p class="note" style="margin-bottom:0;margin-top:10px;">* Required field</p>
 					</div>
 				</div>
 				<div class="block">
@@ -66,7 +65,7 @@
 				</div>
 
 				<div class="block">
-					<h4>Variants:</h4>
+					<h4>Variants:*</h4>
 					<p class="note">Enter new columns consecutively. Clearing a column will also clear all columns to the right.</p>
 					<div class="form-row">
 						<div class="col-md">
@@ -90,9 +89,10 @@
 							<input type="text" name="attribute_5" class="form-control {{ $errors->has('attribute_5') ? 'has-error' : ''}}" value="{{ old('attribute_5') }}" {{(empty(old('attribute_5')) ? "disabled" : "")}}>
 						</div>
 					</div>
+					<p class="note" style="margin-bottom:0;margin-top:10px;">* Optional fields</p>		
 				</div>
 				<div class="block">
-					<h4>Inventory:</h4>
+					<h4>Inventory:*</h4>
 					<p class="note">If this product will have variants, you may leave this field blank.<br>The quantity will be the sum of the quantities of its variants.</p>
 					<div class="form-row">
 						<div class="form-group col-sm-6">
@@ -100,9 +100,10 @@
 							<input type="number" name="quantity" class="form-control {{ $errors->has('quantity') ? 'has-error' : ''}}"  min="0" value="{{ old('quantity') }}">
 						</div>
 					</div>
+					<p class="note" style="margin-bottom:0;margin-top:10px;">* Optional field</p>		
 				</div>
 				<br>
-				<button type="submit" class="button z-depth-1">Save product</button>
+				<a href="/products" class="btn ghost z-depth-1"><i class="fas fa-chevron-left"></i> Cancel</a> <button type="submit" class="button z-depth-1">Save product</button>
 			</form>
 		</div>
 	</div>

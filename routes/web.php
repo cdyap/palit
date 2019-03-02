@@ -89,7 +89,7 @@ Route::group(['middleware' => 'auth', 'web'], function () {
 });
 
 //Shopping page
-Route::get('/{company_slug}', 'OrdersController@order_page');
+Route::get('/{company_slug}', 'OrdersController@orders_index');
 Route::post('/{company_slug}/addToCart', 'OrdersController@addToCart');
 Route::get('/{company_slug}/cart', 'OrdersController@cart');
 Route::post('/{company_slug}/shipping', 'OrdersController@shipping');

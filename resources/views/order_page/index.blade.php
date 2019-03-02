@@ -245,6 +245,11 @@
                                                                 @endif
                                                             @endif
                                                         @endif
+                                                        @if(count($unavailable_cart_items) > 0) 
+                                                            @if(in_array($item->rowId,$unavailable_cart_items))
+                                                                <b class="text-red">Product unavailable</b><br>
+                                                            @endif
+                                                        @endif
                                                         {{$item->id->name}}<br><span class="text-grey">{{$item->options->description}}</span>
                                                     </td>
                                                     <td class="align-middle text-right">{{$item->options->currency . " " . number_format($item->price, 2, '.', ',')}}</td>
@@ -284,7 +289,12 @@
                                     </table>
                                     <div class="action-buttons">
                                         <a class="button ghost" href="" data-dismiss="modal" aria-label="Close">< Add more to cart</a>
-                                        <button type="submit">Add shipping ></button>
+                                        @if(session('invalid_cart_items') || count($unavailable_cart_items) > 0)
+                                            <button type="submit" disabled>Add shipping ></button><br><br>
+                                            <p class="text-red">Please remove all cart items with errors</p>
+                                        @else
+                                            <button type="submit">Add shipping ></button>
+                                        @endif
                                     </div>
                                 </form>
                             </div>

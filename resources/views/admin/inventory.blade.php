@@ -13,7 +13,7 @@
 	</div>
 	<br>
 	<br>
-	<a href="/inventory/new" class="button z-depth-1">Add delivery</a>
+	<a href="/inventory/new" class="button z-depth-1">Add stocks</a>
 	@if($products_with_problems->count() > 0)
 		<a href="" class="button z-depth-1 error" data-toggle="modal" data-target="#errors">View errors</a>
 
@@ -63,7 +63,7 @@
 				<div class="table-responsive-sm block" style="margin-top:0">
 					<h4 class="with-underline">Current inventory per product</h4>
 					<p class="note">Click a row to show variant details</p>
-					<table class="table table-hover inventory-table">
+					<table class="table inventory-table">
 						<thead>
 							<tr>
 								<th>Name</th>
@@ -75,7 +75,7 @@
 						</thead>
 						<tbody>
 							@foreach($products as $product)
-								<tr data-product="{{$product->id}}" data-toggle="modal" data-target="#productModal{{$product->slug}}" class="hover-pointer">
+								<tr data-product="{{$product->id}}">
 									<td>{{$product->name}}</td>
 									<td class="text-right">{{$product->available_inventory}}</td>
 									<td class="text-right">{{$product->incoming_inventory}}</td>
@@ -106,7 +106,7 @@
 					</table>
 				</div>
 			@endif
-			@foreach($products as $product)
+			{{-- @foreach($products as $product)
 				@if($product->variants->count() > 0)
 					<div class="modal product-modal fade bd-example-modal-lg" tabindex="-1" role="dialog" id="productModal{{$product->slug}}" aria-labelledby="product Modal" aria-hidden="true">
 						<div class="modal-dialog modal-lg modal-dialog-centered" role="document">
@@ -206,7 +206,7 @@
 						</div>
 					</div>
 				@endif
-			@endforeach
+			@endforeach --}}
 		</div>
 	</div>
 	<div class="row">
@@ -252,7 +252,7 @@
 								<div class="modal fade bd-example-modal" tabindex="-1" role="dialog" id="deleteDelivery{{$delivery->id}}" aria-labelledby="deleteDelivery" aria-hidden="true">
 									<div class="modal-dialog modal modal-dialog-centered" role="document">
 										<div class="modal-content ">
-											<form action="/{{Auth::user()->url()}}/inventory/{{$delivery->id}}/delete" method="POST" class="delete_delivery_form">
+											<form action="/inventory/{{$delivery->id}}/delete" method="POST" class="delete_delivery_form">
 												<input type="hidden" name="_token" value="{{ csrf_token() }}">
 												<input type="hidden" name="_method" value="delete" />
 												<div class="modal-header">
@@ -407,7 +407,7 @@
 								<div class="modal fade bd-example-modal" tabindex="-1" role="dialog" id="deleteDelivery{{$delivery->id}}" aria-labelledby="deleteDelivery" aria-hidden="true">
 									<div class="modal-dialog modal modal-dialog-centered" role="document">
 										<div class="modal-content ">
-											<form action="/{{Auth::user()->url()}}/inventory/{{$delivery->id}}/delete" method="POST" class="delete_delivery_form">
+											<form action="/inventory/{{$delivery->id}}/delete" method="POST" class="delete_delivery_form">
 												<input type="hidden" name="_token" value="{{ csrf_token() }}">
 												<input type="hidden" name="_method" value="delete" />
 												<div class="modal-header">

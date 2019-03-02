@@ -92,6 +92,177 @@ $(document).on('turbolinks:load',function(){
 		}
 	});
 
+	// $('body.admin.orders_unpaid.OrdersController').ready(function(){
+		
+	// 	$('.delete-order-button').toggle(function() {
+	// 	    $('.delete-order-form').submit();
+	// 	}, function() {
+	// 	    $(this).html('Click again to delete this order');
+	// 	});
+	// });
+
+	$('body.admin table-sticky').ready(function(){
+		// Declare variables and shorthands
+	    var $t     = $(this),
+	        $w     = $(window),
+	        $thead = $(this).find('thead').clone(),
+	        $col   = $(this).find('thead, tbody').clone();
+	    // Here we select for <table> elements universally,
+	    // but you can definitely fine tune your selector
+	    
+	    $('.table-sticky').each(function() {
+			if($(this).find('thead').length > 0 && $(this).find('th').length > 0) {
+				// Clone <thead>
+				var $w	   = $(window),
+					$t	   = $(this),
+					$thead = $t.find('thead').clone(),
+					$col   = $t.find('thead, tbody').clone();
+
+				// Add class, remove margins, reset width and wrap table
+				$t
+				.addClass('sticky-enabled')
+				.css({
+					margin: 0,
+					width: '100%'
+				}).wrap('<div class="sticky-wrap" />');
+
+				if($t.hasClass('overflow-y')) $t.removeClass('overflow-y').parent().addClass('overflow-y');
+
+				// Create new sticky table head (basic)
+				$t.after('<table class="sticky-thead" />');
+
+				// If <tbody> contains <th>, then we create sticky column and intersect (advanced)
+				if($t.find('tbody th').length > 0) {
+					$t.after('<table class="sticky-col" /><table class="sticky-intersect" />');
+				}
+
+				// Create shorthand for things
+				var $stickyHead  = $(this).siblings('.sticky-thead'),
+					$stickyCol   = $(this).siblings('.sticky-col'),
+					$stickyInsct = $(this).siblings('.sticky-intersect'),
+					$stickyWrap  = $(this).parent('.sticky-wrap');
+
+				$stickyHead.append($thead);
+
+				$stickyCol
+				.append($col)
+					.find('thead th:gt(0)').remove()
+					.end()
+					.find('tbody td').remove();
+
+				$stickyInsct.html('<thead><tr><th>'+$t.find('thead th:first-child').html()+'</th></tr></thead>');
+				
+				// Set widths
+				var setWidths = function () {
+						$t
+						.find('thead th').each(function (i) {
+							$stickyHead.find('th').eq(i).width($(this).width());
+						})
+						.end()
+						.find('tr').each(function (i) {
+							$stickyCol.find('tr').eq(i).height($(this).height());
+						});
+
+						// Set width of sticky table head
+						$stickyHead.width($t.width());
+
+						// Set width of sticky table col
+						$stickyCol.find('th').add($stickyInsct.find('th')).width($t.find('thead th').width())
+					},
+					repositionStickyHead = function () {
+						// Return value of calculated allowance
+						var allowance = calcAllowance();
+					
+						// Check if wrapper parent is overflowing along the y-axis
+						if($t.height() > $stickyWrap.height()) {
+							// If it is overflowing (advanced layout)
+							// Position sticky header based on wrapper scrollTop()
+							if($stickyWrap.scrollTop() > 0) {
+								// When top of wrapping parent is out of view
+								$stickyHead.add($stickyInsct).css({
+									opacity: 1,
+									top: $stickyWrap.scrollTop(),
+									display: "table"
+								});
+							} else {
+								// When top of wrapping parent is in view
+								$stickyHead.add($stickyInsct).css({
+									opacity: 0,
+									top: 0,
+									display: "none"
+								});
+							}
+						} else {
+							// If it is not overflowing (basic layout)
+							// Position sticky header based on viewport scrollTop
+							if($w.scrollTop() > $t.offset().top && $w.scrollTop() < $t.offset().top + $t.outerHeight() - allowance) {
+								// When top of viewport is in the table itself
+								$stickyHead.add($stickyInsct).css({
+									opacity: 1,
+									top: $w.scrollTop() - $t.offset().top,
+									display: "table"
+								});
+							} else {
+								// When top of viewport is above or below table
+								$stickyHead.add($stickyInsct).css({
+									opacity: 0,
+									top: 0,
+									display: "none"
+								});
+							}
+						}
+					},
+					repositionStickyCol = function () {
+						if($stickyWrap.scrollLeft() > 0) {
+							// When left of wrapping parent is out of view
+							$stickyCol.add($stickyInsct).css({
+								opacity: 1,
+								left: $stickyWrap.scrollLeft()
+							});
+						} else {
+							// When left of wrapping parent is in view
+							$stickyCol
+							.css({ opacity: 0 })
+							.add($stickyInsct).css({ left: 0 });
+						}
+					},
+					calcAllowance = function () {
+						var a = 0;
+						// Calculate allowance
+						$t.find('tbody tr:lt(3)').each(function () {
+							a += $(this).height();
+						});
+						
+						// Set fail safe limit (last three row might be too tall)
+						// Set arbitrary limit at 0.25 of viewport height, or you can use an arbitrary pixel value
+						if(a > $w.height()*0.25) {
+							a = $w.height()*0.25;
+						}
+						
+						// Add the height of sticky header
+						a += $stickyHead.height();
+						return a;
+					};
+
+				setWidths();
+
+				$t.parent('.sticky-wrap').scroll($.throttle(250, function() {
+					repositionStickyHead();
+					repositionStickyCol();
+				}));
+
+				$w.on('load', function(){
+					setWidths
+				})
+				.resize($.debounce(250, function () {
+					setWidths();
+					repositionStickyHead();
+					repositionStickyCol();
+				}))
+				.scroll($.throttle(200, repositionStickyHead));
+			}
+		});
+	});
 	$('body.admin.shipping.SettingsController').ready(function(){
 		$('table.shippings_table').on('click', '.toggle_availability_shipping', function(){
 			toggle_available_shipping($(this).data('variant'));
@@ -791,9 +962,6 @@ $(document).on('turbolinks:load',function(){
 	});
 
 	$('body.admin.create.InventoryController').ready(function(){
-		$('select.select-product').change(function(){
-			$('form.select-product').submit();
-		})
 
 		//change datepicker if javascript is available
 		$('.datepicker').attr('type','text');
@@ -810,157 +978,61 @@ $(document).on('turbolinks:load',function(){
 			$(this).select();
 		});
 
-		//get product/variant information and populate form
-		$('form.select-product').submit(function(e){
-			e.preventDefault();
-			$.ajaxSetup({
-			  headers: {
-			    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-			  }
-			});
+		$('#confirmProductsModal').on('show.bs.modal', function (e) {
+			supplier = $('#supplier').val();
+			expected_arrival = $('#expected_arrival').val();
 
-			$this_form = $(this);
-			$('.product-quantity').val("");
-			$('.product-quantity').attr("name", "xx");
-			$('.variants-to-add input').remove();
-
-			$.ajax({
-			    dataType: 'JSON',
-			    method: $this_form.attr('method'),
-			    url: $this_form.attr('action'),
-			    data: $this_form.serialize(),
-			    success: function(a) {
-			    	if(a.success) {
-				    	$('.product-block').removeClass('hide');
-				    	$('.product-block .product-name').text(a.product.name);
-				    	$('.product-block .product-inventory').text(a.available_inventory);
-				    	$('.product-block .product-incoming').text(a.incoming_inventory);
-				    	$('.product-block .product-orders').text(a.orders);
-				    	console.log(a);
-				    	
-				    	if(a.has_variants) {
-				    		$('.product-to-add').addClass('hide');
-				    		$('.variants-to-add').removeClass('hide');
-				    		$('.variants-to-add table tbody').find('tr').remove();
-				    		$('.variants-to-add table').find('td,th').remove();
-				    		
-				    		$.each(a.variant_columns, function(key, value) {
-				    			column = "<th>"+value.value+"</th>";
-				    			$('.variants-to-add table thead').append(column);
-				    		});
-				    		$('.variants-to-add table thead').append("<th class='text-right'>Inventory</th><th class='text-right'>Incoming</th><th class='text-right'>Orders</th><th style='width:170px'>Quantity to add</th>");
-
-				    		$.each(a.product.variants, function(key, value) {
-				    			column = "<tr>";
-				    			variant_columns = "";
-				    			if(typeof value.attribute_1 !== 'undefined' && value.attribute_1 !== null) {
-				    				column = column + "<td>"+value.attribute_1+"</td>";
-				    				variant_columns = variant_columns + a.variant_columns[0].value + ": " + value.attribute_1;
-				    			}
-				    			if(typeof value.attribute_2 !== 'undefined' && value.attribute_2 !== null) {
-				    				column = column + "<td>"+value.attribute_2+"</td>";
-				    				variant_columns = variant_columns + ", " + a.variant_columns[1].value + ": " + value.attribute_2;
-				    			}
-				    			if(typeof value.attribute_3 !== 'undefined' && value.attribute_3 !== null) {
-				    				column = column + "<td>"+value.attribute_3+"</td>";
-				    				variant_columns = variant_columns  + ", "+ a.variant_columns[2].value + ": " + value.attribute_3;
-				    			}
-				    			if(typeof value.attribute_4 !== 'undefined' && value.attribute_4 !== null) {
-				    				column = column + "<td>"+value.attribute_4+"</td>";
-				    				variant_columns = variant_columns + ", " + a.variant_columns[3].value + ": " + value.attribute_4;
-				    			}
-				    			if(typeof value.attribute_5 !== 'undefined' && value.attribute_5 !== null) {
-				    				column = column + "<td>"+value.attribute_5+"</td>";
-				    				variant_columns = variant_columns + ", " + a.variant_columns[4].value + ": " + value.attribute_5;
-				    			}
-				    			column = column + "<td class='text-right'>"+value.available_inventory+"</td>"
-				    			column = column + "<td class='text-right'>"+value.incoming_inventory+"</td>"
-				    			column = column + "<td class='text-right'>"+value.inventory+"</td>"
-				    			column = column + '<td><input type="number" class="form-control" name="variant['+value.id+']" min="0" data-product="'+a.product.name+'" data-description="'+variant_columns+'" value="0"></td>';
-				    			column = column + "</tr>";
-				    			$('.variants-to-add table tbody').append(column);
-				    		});
-				    	} else {
-				    		$('.product-to-add').removeClass('hide');
-				    		$('.variants-to-add').addClass('hide');
-				    		$('.product-block .product-quantity').attr('name', "product["+a.product.id+"]");
-				    		$('.product-block .product-quantity').attr('data-product', a.product.name);
-				    		// $('.product-block .product-quantity').data('product', a.product.name);
-				    		$('.product-block .product-to-add input').select();
-				    	}
-						
-				    } 
-			    },
-			    error: function(a) {
-			    	console.log(a);
-			    	$('.alerts-holder').prepend('<div class="alert alert-error alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>'+a.statusText+'<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
-			    }
-		  	});	
-		  	
-			setTimeout(removeAddedAlerts, 5000);
-			$("body").tooltip({
-			    selector: '[data-toggle="tooltip"]'
-			});
-		});
-
-		//remove items from delivery cart
-		$('table.table .delivery-cart').on('click', 'td button', function(){
-			if ($('.delivery-cart table.table tbody tr').length === 1) {
-				$('.alerts-holder').prepend('<div class="alert alert-error alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>You cannot remove the only item in the delivery cart<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
-				setTimeout(removeAddedAlerts, 5000);
-			} else {
-				$(this).closest('tr').remove();	
-			}		
-		});
-
-		//add to delivery
-		$('.add-to-delivery').click(function(){
-			$form_inputs = $('.product-block').find('input');
-			// inputs = [];
-			count = 0;
-			$.each($form_inputs, function(key, value) {
-				// form = [value.name, value.value];
-				if (value.name !== "xx" && value.value !== "0" && value.value !== "") {
-					if ($('.delivery-cart table.table input[name="'+value.name+'"]').length === 0) {
-						count = count + 1;
-						$('.delivery-cart').removeClass('hide');
-						if(!value.dataset.description){
-							value.dataset.description = "";
-						}
-						row = "<tr><td>"+value.dataset.product+"</td><td>"+value.dataset.description+"</td><td>" + value.value + "</td><input type='hidden' value='"+value.value+"' name='"+value.name+"' class=''><td><button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button></td></tr>";
-						$('.delivery-cart form table tbody').append(row);
-
-						$('.alerts-holder').prepend('<div class="alert alert-success alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>Item added<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
-						setTimeout(removeAddedAlerts, 5000);
-					} else {
-						count = count + 1;
-						$('.alerts-holder').prepend('<div class="alert alert-error alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>Item already in delivery cart<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
-						setTimeout(removeAddedAlerts, 5000);
+			switch(supplier.length) {
+				case 0:
+					if(!$("#confirm-supplier").hasClass("text-red")){
+					    $("#confirm-supplier").addClass("text-red");
 					}
-					
-				}
+					$('#confirm-supplier').html('None entered');
+					break;
+				default:
+					$('#confirm-supplier').removeClass('text-red');
+					$('#confirm-supplier').html(supplier);
+					break;
+			}
+			switch(expected_arrival.length) {
+				case 0:
+					if(!$("#confirm-date-arrival").hasClass("text-red")){
+					    $("#confirm-date-arrival").addClass("text-red");
+					}
+					$('#confirm-date-arrival').html('None entered');
+					break;
+				default:
+					$('#confirm-date-arrival').removeClass('text-red');
+					$('#confirm-date-arrival').html(expected_arrival);
+					break;
+			}
+			stocked_up_products = $('.input-stockup').filter(function() {
+			    return $(this).val() > 0;
+			  });
 
+			table = $('.confirm-products tbody');
+			table.empty();
+			$('.input-stockup').each(function() {
+				if($(this).val() > 0) {
+					var tr = document.createElement("tr");
+					var td = document.createElement("td");
+					var txt = document.createTextNode($(this).data('description'));
+					row = "<tr class='confirmed-products'><td>"+$(this).data('description')+"</td><td class='text-right'>"+$(this).val()+"</td></tr>";
+					table.append(row);
+				}
 			});
 
-			if(count == 0) {
-				$('.alerts-holder').prepend('<div class="alert alert-error alert-dismissible fade show z-depth-1-half" role="alert" data-auto-dismiss>All quantities entered are 0<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
+			if($('.confirmed-products').length < 1) {
+				row = "<tr class='confirmed-products'><td class='text-red text-center' colspan='2'>No products selected</td></tr>";
+					table.append(row);
+			}
+
+			if($('#confirmProductsModal .text-red').length > 0) {
+				$('.confirm-products-submit').prop('disabled', true);
+				$('.confirm-products-submit').html('Resolve errors in red');
 			} else {
-				// Make sure this.hash has a value before overriding default behavior
-			    if (this.hash !== "") {
-			      // Prevent default anchor click behavior
-			      event.preventDefault();
-			      // Store hash
-			      var hash = this.hash;
-			      // Using jQuery's animate() method to add smooth page scroll
-			      // The optional number (800) specifies the number of milliseconds it takes to scroll to the specified area
-			      $('html, body').animate({
-			        scrollTop: $(hash).offset().top - 100 
-			      }, 400, function(){
-			   
-			        // Add hash (#) to URL when done scrolling (default click behavior)
-			        window.location.hash = "";
-			      });
-			    } // End if
+				$('.confirm-products-submit').prop('disabled', false);
+				$('.confirm-products-submit').html('Stock up products');
 			}
 		});
 
@@ -979,7 +1051,7 @@ $(document).on('turbolinks:load',function(){
 
 });
 
-$('body.order_page').ready(function(){
+$('body.orders_index').ready(function(){
 	$('.dropright').on('shown.bs.dropdown', function(){
 		$(this).addClass('active');
 	});
@@ -1010,7 +1082,7 @@ $('body.order_page').ready(function(){
 
 		// For some browsers, `attr` is undefined; for others,
 		// `attr` is false.  Check for both.
-		if (typeof attr !== typeof undefined && attr !== false) {
+		if (typeof max == typeof undefined || max == false) {
 			new_val = +input.val() + 1;
 			input.val(new_val);
 		} else {

@@ -19,8 +19,9 @@
 		</div>
 	@endif
 	</div>
+	<a href="/products" class="btn ghost"><i class="fas fa-chevron-left"></i> All products</a>
 	<br>
-	<h5><a href="/products">< All products</a></h5>
+	<br>
 	<div class="row">
 		<div class="col-xs-12 col-lg-9">
 			<div class="block">
@@ -412,7 +413,7 @@
 			<div class="modal-dialog modal-lg modal-dialog-centered" role="document">
 				<div class="modal-content ">
 					<div class="modal-header">
-						<h5 class="modal-title" id="exampleModalLabel">Upload header image for {{$product->name}}</h5>
+						<h5 class="modal-title" id="exampleModalLabel">Upload header image for <b>{{$product->name}}</b></h5>
 						<button type="button" class="close" data-dismiss="modal" aria-label="Close">
 						<span aria-hidden="true">&times;</span>
 						</button>

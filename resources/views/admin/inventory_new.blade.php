@@ -22,106 +22,137 @@
 	@endif
 	</div>
 	<div class="row">
-		<div class="col-lg-8 col-xs-12">
-			<h4 id="AddItemToCart">1. Add products and variants to delivery cart</h4>
-			<p class="caption">SELECT PRODUCT TO ADD</p>
-			<form action="/inventory/getProduct" method="GET" class="select-product">
-				<input type="hidden" name="_token" value="{{ csrf_token() }}">
-				<div class="form-group">
-					<select name="product_id" class="form-control select-product" required>
-						<option selected="selected" disabled>None</option>
-						@foreach($products as $product)
-							<option value="{{$product->id}}">{{$product->name}}</option>
-						@endforeach						
-					</select>
-				</div>
-				<button type="submit" class="hide">Submit</button>
-			</form>
-			<form action="/products/store" method="POST" class="">
-				<div class="block hide product-block" style="margin-top:0;padding-bottom:30px;">
-					<h4 class="product-name" style="margin-bottom:0">Products</h4>
-					<div class="row">
-						<div class="col">
-							<p class="caption">INVENTORY:</p>
-							<h5 class="product-inventory"></h5>
+		<div class="col-lg-10 col-md-12">
+			@if($products_with_variants->count() > 0 || $products_wo_variants->count() > 0)
+				<form action="/inventory/store" method="POST">
+					<input type="hidden" name="_token" value="{{ csrf_token() }}">
+					<div class="block">
+						<h4>Delivery details</h4>
+						<br>
+						<br>
+						<div class="form-row">
+							<div class="col-xs-10 col-sm-9 form-group">
+								<label for="date">Supplier:*</label>
+								<input type="text" name="supplier" id="supplier" class="form-control {{ $errors->has('supplier') ? 'has-error' : ''}}"  value="{{ old('supplier') }}" required>
+							</div>
 						</div>
-						<div class="col">
-							<p class="caption">INCOMING:</p>
-							<h5 class="product-incoming"></h5>
-						</div>
-						<div class="col">
-							<p class="caption">ORDERS:</p>
-							<h5 class="product-orders"></h5>
-						</div>
-					</div>
-					<br>
-					<div class="row product-to-add">
-						<div class="col-xs-6 col-sm-4">
-							<div class="form-group">
-								<label for="quantity">Quantity to add:</label>
-								<input type="number" class="form-control product-quantity" name="xx" min="0" data-product="">
+						<div class="form-row">
+							<div class="col-xs-8 col-sm-6 form-group">
+								<label for="date">Expected date of arrival:*</label>
+								<input type="date" name="expected_arrival" id="expected_arrival" class="form-control datepicker {{ $errors->has('expected_arrival') ? 'has-error' : ''}}" required value="{{ old('expected_arrival') }}" style="background: white!important">
 							</div>
 						</div>
 					</div>
-					<div class="row variants-to-add">
-						<div class="col">
-							<table class="table">
-								<thead>
-									<th></th>
-								</thead>
-								<tbody>
-									<td></td>
-								</tbody>
-							</table>
-						</div>
-					</div>
-					<br>
-					<a href="#finalize-delivery" class="button add-to-delivery">Add to delivery cart</a>
-				</div>
-				
-			</form>
-			<br><br>
-		</div>
-		<div class="col-lg-8 col-xs-12 hide delivery-cart">
-			<h4 id="finalize-delivery">2. Finalize delivery</h4>
-			<form action="/inventory/store" method="POST">
-				<input type="hidden" name="_token" value="{{ csrf_token() }}">
-				<div class="block">
-					<h4>Delivery details</h4>
-					<br>
-					<br>
-					<div class="form-row">
-						<div class="col-xs-8 col-sm-6 form-group">
-							<label for="date">Expected date of arrival:*</label>
-							<input type="date" name="expected_arrival" id="expected_arrival" class="form-control datepicker {{ $errors->has('expected_arrival') ? 'has-error' : ''}}" required value="{{ old('expected_arrival') }}" style="background: white!important">
-						</div>
-					</div>
-					<div class="form-row">
-						<div class="col-xs-10 col-sm-9 form-group">
-							<label for="date">Supplier:*</label>
-							<input type="text" name="supplier" id="supplier" class="form-control {{ $errors->has('supplier') ? 'has-error' : ''}}"  value="{{ old('supplier') }}" required>
-						</div>
-					</div>
-					<p class="note" style="margin-bottom:0;margin-top:10px;">* Required field</p>	
-					<br>
-					<br>
-					<label>Delivery cart:</label>
-					<table class="table">
-						<thead>
-							<th>Product</th>
-							<th>Variant</th>
-							<th>Quantity</th>
-							<th style="max-width: 50px;"></th>
-						</thead>
-						<tbody class="delivery-cart">
+					<div class="table-responsive-sm block" style="margin-top:0">
+						<h4 class="with-underline">Product inventory</h4>
+						<p class="note">Enter quantity of products to deliver</p>
+						<table class="table inventory-table">
+							<thead>
+								<tr>
+									<th>Name</th>
+									<th class="text-right" style="max-width:100px;">Inventory</th>
+									<th class="text-right" style="max-width:100px;">Incoming</th>
+									<th class="text-right" style="max-width:100px;">Confirmed</th>
+									<th class="text-right" style="max-width:100px;">Unconfirmed</th>
+									<th class="text-right" style="max-width:100px;">Quantity</th>
+								</tr>
+							</thead>
+							<tbody>
+								@if($products_wo_variants->count() > 0)
+									<tr>
+										<td colspan="6" class="text-underline text-bold">Without variants</td>
+									</tr>
+									@foreach($products_wo_variants as $product)
+										<tr data-product="{{$product->id}}" class="align-middle">
+											<td class="align-middle">{{$product->name}}</td>
+											<td class="text-right align-middle">{{$product->available_inventory}}</td>
+											<td class="text-right align-middle">{{$product->incoming_inventory}}</td>
+											<td class="text-right align-middle">{{$paid_orders->where('product_id', $product->id)->sum('quantity')}}</td>
+											<td class="text-right align-middle">{{$unpaid_orders->where('product_id', $product->id)->sum('quantity')}}</td>
+											<td><input type="number" min="0" class="form-control text-right float-right input-stockup" name="product[{{$product->id}}]" style="width:100px;" data-description="{{$product->name}}" value=""></td>
+										</tr>
+									@endforeach								
+								@endif
+								@if($products_with_variants->count() > 0)
+									<tr>
+										<td colspan="6" class="text-underline text-bold">With variants</td>
+									</tr>
+									@foreach($products_with_variants as $product)
+										<tr data-product="{{$product->id}}">
+											<td>{{$product->name}}</td>
+											<td class="text-right">{{$product->available_inventory}}</td>
+											<td class="text-right">{{$product->incoming_inventory}}</td>
+											<td class="text-right">{{$paid_orders->where('product_id', $product->id)->sum('quantity')}}</td>
+											<td class="text-right">{{$unpaid_orders->where('product_id', $product->id)->sum('quantity')}}</td>
+											<td></td>
+										</tr>
+										@foreach($product->variants->sortBy('position') as $variant)
+											<tr class="variant_{{$variant->id}}" data-id="{{$variant->id}}" data-inventory="{{$variant->inventory}}" data-price="{{$variant->price}}" data-itemId="{{{ $variant->id }}}"  style="background:#F8F9FA"> 
+												<td class="align-middle">&nbsp;&nbsp;
+													<?php $variant_description = array(); ?>
 
-						</tbody>
-					</table>
-					<br>
-					{{-- <a href="#AddItemToCart" class="button ghost">Add more items</a> --}}
-					<button type="submit" class="button">Add delivery</button>	
-				</div>
-			</form>
+													@foreach($product_variant_columns->where('name', 'variant_'.$product->id)->sortBy('value_2') as $column)
+														<?php $variant_description[] = $column->value .": ".$variant->{$column->value_2}; ?>
+													@endforeach
+													{{collect($variant_description)->implode("; ")}}
+												</td>
+												<td class="text-right align-middle">{{$variant->available_inventory}}</td>
+												<td class="text-right align-middle">{{$variant->incoming_inventory}}</td>
+												<td class="text-right align-middle">{{$paid_orders->where('variant_id', $variant->id)->sum('quantity')}}</td>
+												<td class="text-right align-middle">{{$unpaid_orders->where('variant_id', $variant->id)->sum('quantity')}}</td>
+												<td><input type="number" min="0" class="form-control text-right float-right input-stockup" name="variant[{{$variant->id}}]" style="width:100px;" data-description="{{$product->name . " / " . collect($variant_description)->implode("; ")}}"  value=""></td>
+											</tr>
+										@endforeach
+									@endforeach
+								@endif
+							</tbody>
+						</table>
+					</div>
+					<button type="button" data-toggle="modal" data-target="#confirmProductsModal">Confirm products for stocking</button>
+					<div class="modal fade bd-example-modal with-partition" tabindex="-1" role="dialog" id="confirmProductsModal" aria-labelledby="deleteVariant" aria-hidden="true">
+						<div class="modal-dialog modal modal-dialog-centered" role="document">
+							<div class="modal-content ">
+								<div class="modal-header">
+									<h5 class="modal-title" id="exampleModalLabel">Confirm products for stocking</h5>
+									<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+									<span aria-hidden="true">&times;</span>
+									</button>
+								</div>
+									<div class="modal-body">
+										<div class="card-partition">
+											<p class="caption" style="margin-top:0;">SUPPLIER:</p>
+											<h5 id="confirm-supplier" class="text-red">None entered</h5>
+											<p class="caption">EXPECTED DATE OF ARRIVAL:</p>
+											<h5 id="confirm-date-arrival" class="text-red">None entered</h5>
+										</div>
+										<div class="card-subpartition">
+											<div class="row">
+												<div class="col">
+													<h4 class="text-bold">PRODUCTS FOR DELIVERY:</h4>
+													<table class="table confirm-products">
+														<thead>
+															<th>Product</th>
+															<th class="text-right">Quantity</th>
+														</thead>
+														<tbody>
+															
+														</tbody>
+													</table>
+												</div>
+											</div>
+										</div>
+									</div>
+								<div class="modal-footer">
+									<button type="button" class="button secondary" data-dismiss="modal">Cancel</button>
+									<button type="submit" class="button confirm-products-submit">Stock up products</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				</form>
+			@else
+				<h4>No products added.</h4>
+			@endif
 		</div>
 	</div>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js">

@@ -12,7 +12,7 @@
     <link rel="shortcut icon" href="{{ URL::to('/img/favicon.png') }}">
 
     <!-- Styles -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.9/css/solid.css" integrity="sha384-29Ax2Ao1SMo9Pz5CxU1KMYy+aRLHmOu6hJKgWiViCYpz3f9egAJNwjnKGgr+BXDN" crossorigin="anonymous">
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.9/css/fontawesome.css" integrity="sha384-Lyz+8VfV0lv38W729WFAmn77iH5OSroyONnUva4+gYaQTic3iI2fnUKtDSpbVf0J" crossorigin="anonymous">
     <link href="{{ asset('css/app.css') }}" rel="stylesheet">
@@ -23,7 +23,7 @@
 </head>
 <body class="admin {{$action}} {{$controller}}">
     <div id="app">
-        <nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light justify-content-end">
+        {{-- <nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light justify-content-end">
             <a class="navbar-brand logo d-md-none d-lg-none d-xl-none">
                 <?xml version="1.0" encoding="utf-8"?>
                 <!-- Generator: Adobe Illustrator 21.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
@@ -95,11 +95,11 @@
                 </ul>
 
             </div>
-        </nav>
+        </nav> --}}
         <div class="container-fluid">
             <div class="row">
-                <div class="sidebar z-depth-1 d-none d-lg-block d-xl-block d-md-block">
-                    <div class="item logo">
+                <div class="sidebar">
+                    {{-- <div class="item logo">
                         <?xml version="1.0" encoding="utf-8"?>
                         <!-- Generator: Adobe Illustrator 21.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
                         <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
@@ -125,20 +125,20 @@
                         </g>
                         </svg>
 
-                    </div>
-                    <div class="item {{ $sidebar == "Dashboard" ? "active" : ""}}">
+                    </div> --}}
+                    <div class="item d-flex align-items-center justify-content-center {{ $sidebar == "Dashboard" ? "active" : ""}}">
                         <a href="/dashboard" class="">
                         <i class="fas fa-chart-bar mx-auto d-block text-center"></i>
                         <p class="text-center">Dashboard</p>
                         </a>
                     </div>
-                    <div class="item {{ $sidebar == "Products" ? "active" : ""}}">
+                    <div class="item d-flex align-items-center justify-content-center {{ $sidebar == "Products" ? "active" : ""}}">
                         <a href="/products">
                         <i class="fas fa-shopping-cart mx-auto d-block text-center"></i>
                         <p class="text-center" href="">Products</p>
                         </a>
                     </div>
-                    <div class="item {{ $sidebar == "Orders" ? "active" : ""}}">
+                    <div class="item d-flex align-items-center justify-content-center {{ $sidebar == "Orders" ? "active" : ""}}">
                         <a href="/orders">
                         @if(Auth::user()->unreadNotifications->count() > 0)
                         <span class="badge badge-light">{{Auth::user()->unreadNotifications->count()}}</span>
@@ -147,13 +147,13 @@
                         <p class="text-center" href="">Orders</p>
                         </a>
                     </div>
-                    <div class="item {{ $sidebar == "Inventory" ? "active" : ""}}">
+                    <div class="item d-flex align-items-center justify-content-center {{ $sidebar == "Inventory" ? "active" : ""}}">
                         <a href="/inventory">
                         <i class="fas fa-dolly mx-auto d-block text-center"></i>
                         <p class="text-center" href="">Inventory</p>
                         </a>
                     </div>
-                    <div class="item {{ $sidebar == "Settings" ? "active" : ""}}">
+                    <div class="item d-flex align-items-center justify-content-center {{ $sidebar == "Settings" ? "active" : ""}}">
                         <a href="/settings">
                         <i class="fas fa-cog mx-auto d-block text-center"></i>
                         <p class="text-center" href="">Settings</p>
@@ -161,7 +161,7 @@
                     </div>
                 </div>
                 <div class="content">
-                    <div class="page-header z-depth-1-half">
+                    <div class="page-header">
                         <h1>{{empty($title) ? $sidebar : $title}}</h1>
                     </div>
                     <div class="container-fluid">

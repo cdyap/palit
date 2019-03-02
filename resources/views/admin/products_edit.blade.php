@@ -1,7 +1,6 @@
 @extends('layouts.admin')
 
 @section('content')
-	<br>
 	@if ($errors->any())
 		<div class="alerts-holder">
 		    <div class="alert alert-error fade show alert-dismissible z-depth-1-half" role="alert">
@@ -14,7 +13,8 @@
 		    </div>
 		</div>
 	@endif
-	<h5><a href="/products/{{$product->slug}}">< {{$product->name}}</a></h5>
+	<a href="/products/{{$product->slug}}" class="btn ghost"><i class="fas fa-chevron-left"></i> Cancel edits</a>
+	<br><br>
 	<div class="row">
 		<div class="col-lg-8">
 			<form action="/products/{{$product->slug}}/update" method="POST" class="with-cascading-disabling">
@@ -23,21 +23,21 @@
 					<input type="hidden" name="_token" value="{{ csrf_token() }}">
 					<input type="hidden" name="_method" value="PATCH">
 					<div class="form-group">
-						<label for="name">Name:*</label>
+						<label for="name">Name:</label>
 						<input type="text" name="name" class="form-control {{ $errors->has('name') ? 'has-error' : ''}}" required value="{{ $product->name }}">
 					</div>
 					<div class="form-group">
-						<label for="description">Description:*</label>
+						<label for="description">Description:</label>
 						<textarea name="description" required class="form-control {{ $errors->has('description') ? 'has-error' : ''}}" rows="4">{{ $product->description }}</textarea>
 					</div>
 					<div class="form-group">
-						<label for="description">SKU:</label>
+						<label for="description">SKU:*</label>
 						<input type="text" name="SKU" class="form-control {{ $errors->has('SKU') ? 'has-error' : ''}}" value="{{ $product->SKU }}">
 					</div>
-					<p class="note" style="margin-bottom:0;margin-top:10px;">* Required field</p>			
+					<p class="note" style="margin-bottom:0;margin-top:10px;">* Optional field</p>			
 				</div>
 				<div class="block">
-					<h4>Pricing:*</h4>
+					<h4>Pricing:</h4>
 					<div class="form-row">
 						@if($product->hasSameVariantPrices())
 							<div class="input-group">
@@ -52,9 +52,6 @@
 						@else
 							<p class="note" style="margin-bottom:0;margin-top:10px;">Note: You may not edit this product's price here since its variants have varying prices.</p>
 						@endif
-						<div class="col-lg-12">
-							<p class="note" style="margin-bottom:0;margin-top:10px;">* Required field</p>	
-						</div>
 					</div>
 				</div>
 				<div class="block">
@@ -91,7 +88,7 @@
 					</div>
 				@endif
 				<br>
-				<button type="submit" class="button z-depth-1">Save product</button>
+				<a href="/products/{{$product->slug}}" class="btn ghost z-depth-1"><i class="fas fa-chevron-left"></i> Cancel edits</a> <button type="submit" class="button z-depth-1">Save edits</button>
 			</form>
 		</div>
 	</div>
